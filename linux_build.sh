@@ -11,9 +11,11 @@ install_dir="/opt/$bin_name"
 bin_dir="/usr/bin"
 tmp_dir="$HOME/.cache/cmdr_build"
 
-if [ "$qt_dir" != "" ]; then
+if [ ! -d "$qt_dir" ]; then
 
- PATH=$qt_dir:$PATH
+ echo "a path to Qt was not provided, attempting to get it from 'qtpaths.'"
+
+ qt_dir="$(qtpaths --binaries-dir)"
  
 fi
 
@@ -25,18 +27,19 @@ fi
  
 if [ -d "$tmp_dir" ]; then
  
- rm -rfv $tmp_dir
+ rm -rf $tmp_dir
   
 fi
  
-mkdir -vp $tmp_dir
-cp -rv $src_dir/. $tmp_dir
- 
-if [ $? -eq 0 ]; then
- 
+if [ $? -eq 0 -a -d "$qt_dir" ]; then
+
+  mkdir -vp $tmp_dir
+  cp -rv $src_dir/. $tmp_dir
   cd $tmp_dir
+  
+  PATH=$qt_dir:$PATH
  
-  qmake -config release
+  $qt_dir/qmake -config release
  
   if [ $? -eq 0 ]; then
    
@@ -46,12 +49,31 @@ if [ $? -eq 0 ]; then
      
     mkdir -v ./build
     mkdir -v ./build/lib
-    cp -rfv ./icons ./build
+    mkdir -v ./build/platforms
     ldd ./$bin_name | grep "libQt" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     ldd ./$bin_name | grep "libicu" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     ldd ./$bin_name | grep "libssl" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     ldd ./$bin_name | grep "libcrypto" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     mv -v ./$bin_name ./build/$bin_name
+    cp -v $qt_dir/../plugins/platforms/libqxcb.so ./build/platforms/libqxcb.so
+    cp -rfv ./icons ./build
+    cp -rfv $qt_dir/../plugins/xcbglintegrations ./build
+    
+    if [ "$qt_dir" = "/usr/lib/x86_64-linux-gnu/qt5/bin" ]; then
+    
+     cp -fv $qt_dir/../../libQt5DBus.so.5 ./build/lib/libQt5DBus.so.5
+     cp -fv $qt_dir/../../libQt5XcbQpa.so.5 ./build/lib/libQt5XcbQpa.so.5
+     cp -fv $qt_dir/../../libGL.so ./build/lib/libGL.so
+     cp -fv $qt_dir/../../libpcre16.so.3 ./build/lib/libpcre16.so.3
+     
+    else
+    
+     cp -fv $qt_dir/../lib/libQt5DBus.so.5 ./build/lib/libQt5DBus.so.5
+     cp -fv $qt_dir/../lib/libQt5XcbQpa.so.5 ./build/lib/libQt5XcbQpa.so.5
+     cp -fv $qt_dir/../lib/libGL.so ./build/lib/libGL.so
+     cp -fv $qt_dir/../lib/libpcre16.so.3 ./build/lib/libpcre16.so.3
+    
+    fi
     
     startup_script="./build/$bin_name.sh"
     setup_script="./build/setup.sh"
@@ -59,8 +81,10 @@ if [ $? -eq 0 ]; then
     desktop_file="./build/$bin_name.desktop"
     
     echo "#!/bin/sh" > $startup_script
-    echo "export LD_LIBRARY_PATH=$install_dir/lib" >> $startup_script
-    echo "$install_dir/$bin_name \$1 \$2 \$3 \$4" >> $startup_script
+    echo "export QTDIR=$install_dir" >> $startup_script
+    echo "export QT_PLUGIN_PATH=$install_dir" >> $startup_script
+    echo "export LD_LIBRARY_PATH=\"$install_dir/lib:\$LD_LIBRARY_PATH\"" >> $startup_script
+    echo "$install_dir/$bin_name" >> $startup_script
     
     echo "[Desktop Entry]" > $desktop_file
     echo "Type=Application" >> $desktop_file
@@ -80,6 +104,8 @@ if [ $? -eq 0 ]; then
     echo " sudo mkdir -p $install_dir" >> $setup_script
     echo "fi" >> $setup_script
     echo "sudo cp -rv ./lib $install_dir" >> $setup_script
+    echo "sudo cp -rv ./platforms $install_dir" >> $setup_script
+    echo "sudo cp -rv ./xcbglintegrations $install_dir" >> $setup_script
     echo "sudo cp -v ./$bin_name $install_dir" >> $setup_script
     echo "sudo cp -v ./$bin_name.sh $install_dir" >> $setup_script
     echo "sudo cp -v ./uninstall.sh $install_dir" >> $setup_script
@@ -88,6 +114,8 @@ if [ $? -eq 0 ]; then
     echo "sudo chmod 755 $install_dir/uninstall.sh" >> $setup_script
     echo "sudo chmod 755 $install_dir" >> $setup_script
     echo "sudo chmod -R 755 $install_dir/lib" >> $setup_script
+    echo "sudo chmod -R 755 $install_dir/platforms" >> $setup_script
+    echo "sudo chmod -R 755 $install_dir/xcbglintegrations" >> $setup_script
      
     echo "sudo mkdir -p /usr/share/icons/hicolor/8x8/apps" >> $setup_script
     echo "sudo mkdir -p /usr/share/icons/hicolor/16x16/apps" >> $setup_script
