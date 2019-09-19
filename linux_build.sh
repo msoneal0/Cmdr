@@ -13,9 +13,13 @@ tmp_dir="$HOME/.cache/cmdr_build"
 
 if [ ! -d "$qt_dir" ]; then
 
- echo "a path to Qt was not provided, attempting to get it from 'qtpaths.'"
+ echo "a valid path to Qt was not provided, falling back to the default: /usr/lib/x86_64-linux-gnu/qt5/bin"
 
- qt_dir="$(qtpaths --binaries-dir)"
+ qt_dir="/usr/lib/x86_64-linux-gnu/qt5/bin"
+ 
+else
+
+ PATH=$qt_dir:$PATH
  
 fi
 
@@ -36,10 +40,7 @@ if [ $? -eq 0 -a -d "$qt_dir" ]; then
   mkdir -vp $tmp_dir
   cp -rv $src_dir/. $tmp_dir
   cd $tmp_dir
-  
-  PATH=$qt_dir:$PATH
- 
-  $qt_dir/qmake -config release
+  qmake -config release
  
   if [ $? -eq 0 ]; then
    
