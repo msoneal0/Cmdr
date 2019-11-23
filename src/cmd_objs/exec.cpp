@@ -35,7 +35,7 @@ Quit::Quit(QObject *parent) : Command(parent)
     Shared::clientCmds->insert(objectName(), this);
 }
 
-QString Quit::shortText() {return tr("close the application.");}
+QString Quit::shortText() {return tr("close the client application.");}
 QString Quit::ioText()    {return tr("[none]/[none]");}
 QString Quit::longText()  {return TXT_Quit;}
 
@@ -59,9 +59,33 @@ Term::Term(QObject *parent) : Command(parent)
     Shared::clientCmds->insert(objectName(), this);
 }
 
-QString Term::shortText() {return tr("terminate the currently running command.");}
+QString Term::shortText() {return tr("terminate the currently running host command.");}
 QString Term::ioText()    {return tr("[none]/[CMD_ID]");}
 QString Term::longText()  {return TXT_Term;}
+
+Halt::Halt(QObject *parent) : Command(parent)
+{
+    setObjectName("halt");
+
+    Shared::hookBypass->append(objectName());
+    Shared::clientCmds->insert(objectName(), this);
+}
+
+QString Halt::shortText() {return tr("halt/pause the currently running host command.");}
+QString Halt::ioText()    {return tr("[none]/[CMD_ID]");}
+QString Halt::longText()  {return TXT_Term;}
+
+Resume::Resume(QObject *parent) : Command(parent)
+{
+    setObjectName("resume");
+
+    Shared::hookBypass->append(objectName());
+    Shared::clientCmds->insert(objectName(), this);
+}
+
+QString Resume::shortText() {return tr("resume the currently halted/paused host command.");}
+QString Resume::ioText()    {return tr("[none]/[CMD_ID]");}
+QString Resume::longText()  {return TXT_Term;}
 
 void Connect::dataIn(const QString &argsLine)
 {
@@ -117,14 +141,14 @@ void Connect::dataIn(const QString &argsLine)
 
 void Quit::dataIn(const QString &argsLine)
 {
-    Q_UNUSED(argsLine);
+    Q_UNUSED(argsLine)
 
     emit quitApp();
 }
 
 void EndSession::dataIn(const QString &argsLine)
 {
-    Q_UNUSED(argsLine);
+    Q_UNUSED(argsLine)
 
     if (*Shared::connectedToHost)
     {
@@ -134,7 +158,21 @@ void EndSession::dataIn(const QString &argsLine)
 
 void Term::dataIn(const QString &argsLine)
 {
-    Q_UNUSED(argsLine);
+    Q_UNUSED(argsLine)
 
     emit termHostCmd();
+}
+
+void Halt::dataIn(const QString &argsLine)
+{
+    Q_UNUSED(argsLine)
+
+    emit haltHostcmd();
+}
+
+void Resume::dataIn(const QString &argsLine)
+{
+    Q_UNUSED(argsLine)
+
+    emit resumeHostCmd();
 }

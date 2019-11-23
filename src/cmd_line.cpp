@@ -215,10 +215,6 @@ void CmdLine::procCmdLine(const QString &line)
     {
         emit dataToHookedGenFile(toTEXT(argsLine));
     }
-    else if (cmdName.startsWith(CMD_ESCAPE))
-    {
-        toHost(cmdName.mid(1), argsLine);
-    }
     else if (Shared::clientCmds->contains(cmdName))
     {
         toLocalCmd(cmdName, argsLine);

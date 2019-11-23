@@ -61,6 +61,8 @@ signals:
     void unsetUserIO(int flgs);
     void setMaxLines(int value);
     void termHostCmd();
+    void haltHostcmd();
+    void resumeHostCmd();
     void connectToHost();
     void quitApp();
     void disconnectHost();

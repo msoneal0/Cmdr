@@ -41,8 +41,14 @@ view the current session's parameters and connection status information (as seen
 application)."
 
 #define TXT_Term "\
-this will terminate all actions currently being performed by any command; both remotely and \
-locally."
+this will terminate all actions currently being performed by the host command."
+
+#define TXT_Halt "\
+this will halt all actions currently being performed by the host command. this will not \
+terminate the command; just stop what it is currently doing until told to resume."
+
+#define TXT_Resume "\
+this will resume the actions the previously halted host command is currently doing."
 
 #define TXT_EndSession "\
 this diconnects the client from the currently connected host. this will inturn end the session \

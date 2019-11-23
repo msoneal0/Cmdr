@@ -18,10 +18,7 @@
 
 TextBody::TextBody(QWidget *parent) : QTextEdit(parent)
 {
-    localData = Shared::localData;
-    reloading = false;
-    lineCount = 0;
-
+    localData   = Shared::localData;
     txtDocument = new QTextDocument(this);
     txtCursor   = new QTextCursor(txtDocument);
 
@@ -30,15 +27,14 @@ TextBody::TextBody(QWidget *parent) : QTextEdit(parent)
     setWordWrapMode(QTextOption::NoWrap);
     loadTextSettings(localData, this);
     loadTextBodySettings();
-
-    txtDocument->setMaximumBlockCount(maxLines);
 }
 
 void TextBody::loadTextBodySettings()
 {
     mainColor = localData->value("text_settings").toObject().value("text_color").toString();
     errColor  = localData->value("text_settings").toObject().value("err_color").toString();
-    maxLines  = localData->value("max_lines").toInt();
+
+    txtDocument->setMaximumBlockCount(localData->value("max_lines").toInt());
 }
 
 QString TextBody::htmlEsc(const QString &txt)
@@ -51,58 +47,38 @@ QString TextBody::htmlEsc(const QString &txt)
     return ret;
 }
 
-void TextBody::addTextBlock(const QString &txt, const QString &color, TextType tType)
+void TextBody::addTextBlock(const QString &txt, const QString &color)
 {
-    QStringList lines = htmlEsc(txt).split("\n");
+    moveCursor(QTextCursor::End);
 
-    lineCount += lines.size();
+    QStringList lines = htmlEsc(txt).split("\n");
 
     for (int i = 0; i < lines.size(); ++i)
     {
         txtCursor->insertHtml("<div style=\"white-space: pre; color:" + color + ";\">" + lines[i] + "</div>");
 
-        if (i == lines.size() - 1)
+        if (i != lines.size() - 1)
         {
-            if (!reloading) textCache.append(QPair<TextType,QString>(tType, lines[i]));
-        }
-        else
-        {
-            if (!reloading) textCache.append(QPair<TextType,QString>(tType, lines[i] + "\n"));
-
             txtCursor->insertBlock();
         }
-
-        ensureCursorVisible();
     }
+
+    ensureCursorVisible();
 }
 
 void TextBody::setMaxLines(int value)
 {
     txtDocument->setMaximumBlockCount(value);
-
-    trimCache();
-}
-
-void TextBody::trimCache()
-{
-    for (;lineCount > maxLines; --lineCount)
-    {
-        textCache.removeFirst();
-    }
 }
 
 void TextBody::addMainTxt(const QString &txt)
 {
-    moveCursor(QTextCursor::End);
-    addTextBlock(txt, mainColor, MAIN);
-    trimCache();
+    addTextBlock(txt, mainColor);
 }
 
 void TextBody::addErrTxt(const QString &txt)
 {
-    moveCursor(QTextCursor::End);
-    addTextBlock(txt, errColor, ERROR);
-    trimCache();
+    addTextBlock(txt, errColor);
 }
 
 void TextBody::addBigTxt(const QString &txt)
@@ -115,13 +91,6 @@ void TextBody::addBigTxt(const QString &txt)
     addMainTxt(lines);
 }
 
-void TextBody::clearCache()
-{
-    lineCount = 0;
-
-    textCache.clear();
-}
-
 void TextBody::reload()
 {
     clear();
@@ -129,31 +98,13 @@ void TextBody::reload()
     loadTextSettings(localData, this);
     saveLocalData(localData);
     loadTextBodySettings();
-
-    reloading = true;
-
-    for (int i = 0; i < textCache.size(); ++i)
-    {
-        if (textCache[i].first == ERROR)
-        {
-            addErrTxt(textCache[i].second);
-        }
-        else
-        {
-            addMainTxt(textCache[i].second);
-        }
-    }
-
-    reloading = false;
 }
 
 void TextBody::contextMenuEvent(QContextMenuEvent *event)
 {
-    QMenu   *menu   = createStandardContextMenu();
-    QAction *action = menu->addAction("Clear", this, SLOT(clear()));
+    QMenu *menu = createStandardContextMenu();
 
-    connect(action, SIGNAL(triggered()), this, SLOT(clearCache()));
-
+    menu->addAction("Clear", this, SLOT(clear()));
     menu->exec(event->globalPos());
     menu->deleteLater();
 }

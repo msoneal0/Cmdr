@@ -124,9 +124,10 @@ QByteArray wrFrame(quint16 cmdId, const QByteArray &data, uchar dType)
 {
     QByteArray typeBa = wrInt(dType, 8);
     QByteArray cmdBa  = wrInt(cmdId, 16);
-    QByteArray sizeBa = wrInt(data.size(), 24);
+    QByteArray branBa = wrInt(0, 16);
+    QByteArray sizeBa = wrInt(static_cast<quint64>(data.size()), 24);
 
-    return typeBa + cmdBa + sizeBa + data;
+    return typeBa + cmdBa + branBa + sizeBa + data;
 }
 
 QByteArray toTEXT(const QString &txt)
@@ -136,9 +137,18 @@ QByteArray toTEXT(const QString &txt)
     return ret.mid(2);
 }
 
+QByteArray fixedToTEXT(const QString &txt, int len)
+{
+    return toTEXT(txt).leftJustified(len, 0, true);
+}
+
 QString fromTEXT(const QByteArray &txt)
 {
-    return QTextCodec::codecForName(TXT_CODEC)->toUnicode(txt);
+    QByteArray ba = txt;
+
+    ba.replace(QByteArray(2, 0x00), QByteArray());
+
+    return QTextCodec::codecForName(TXT_CODEC)->toUnicode(ba);
 }
 
 QByteArray wrInt(quint64 num, int numOfBits)
@@ -170,9 +180,10 @@ quint64 rdInt(const QByteArray &bytes)
     // convert little endian QByteArrays into local sytem
     // endianness uints.
 
-    QByteArray ba = bytes.leftJustified(sizeof(quint64), 0);
+    QByteArray ba  = bytes.leftJustified(sizeof(quint64), 0);
+    void      *vod = reinterpret_cast<void*>(ba.data());
 
-    return qFromLittleEndian<quint64>((void*) ba.data());
+    return qFromLittleEndian<quint64>(vod);
 }
 
 QString extractCmdName(const QByteArray &data)
@@ -376,6 +387,7 @@ QJsonObject              *Shared::localData       = nullptr;
 QHash<QString, Command*> *Shared::clientCmds      = nullptr;
 QHash<quint16, QString>  *Shared::hostCmds        = nullptr;
 QHash<quint16, QString>  *Shared::genfileCmds     = nullptr;
+QHash<QString, Command*> *Shared::hostDocs        = nullptr;
 QStringList              *Shared::hookBypass      = nullptr;
 QByteArray               *Shared::sessionId       = nullptr;
 QString                  *Shared::clientHookedCmd = nullptr;

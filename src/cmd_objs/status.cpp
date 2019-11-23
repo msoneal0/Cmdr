@@ -23,13 +23,13 @@ Status::Status(QObject *parent) : Command(parent)
     Shared::clientCmds->insert(objectName(), this);
 }
 
-QString Status::shortText() {return tr("view the current session parameters.");}
+QString Status::shortText() {return tr("view the current session parameters at the client's perspective.");}
 QString Status::ioText()    {return tr("[none]/[text]");}
 QString Status::longText()  {return TXT_SeeParams;}
 
 void Status::dataIn(const QString &argsLine)
 {
-    Q_UNUSED(argsLine);
+    Q_UNUSED(argsLine)
 
     QString     txt;
     QTextStream txtOut(&txt);

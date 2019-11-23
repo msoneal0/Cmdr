@@ -24,9 +24,79 @@ About::About(QObject *parent) : Command(parent)
 }
 
 void    About::onStartup() {dataIn(QString());}
-QString About::shortText() {return tr("display information about this MRCI client and display available client specific commands.");}
+QString About::shortText() {return tr("display information about this MRCI client and display all available commands.");}
 QString About::ioText()    {return tr("[{cmd_name}]/[text]");}
 QString About::longText()  {return TXT_About;}
+
+void About::dispInfo(Command *cmdObj)
+{
+    QString     txt;
+    QTextStream txtOut(&txt);
+
+    wordWrap("i/o:     ", txtOut, cmdObj->ioText(), Shared::mainWidget);
+    txtOut << "" << endl;
+    wordWrap("library: ", txtOut, cmdObj->libText(), Shared::mainWidget);
+    txtOut << "" << endl;
+    wordWrap("usage:   ", txtOut, cmdObj->longText(), Shared::mainWidget);
+
+    emit mainTxtOut(txt);
+}
+
+bool About::dispClientCmd(const QString &cmdName)
+{
+    bool ret = false;
+
+    if (Shared::clientCmds->contains(cmdName))
+    {
+        dispInfo(Shared::clientCmds->value(cmdName));
+
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool About::dispHostCmd(const QString &cmdName)
+{
+    bool ret = false;
+
+    if (Shared::hostDocs->contains(cmdName))
+    {
+        dispInfo(Shared::hostDocs->value(cmdName));
+
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool About::dispInfo(const QString &cmdName)
+{
+    if (dispClientCmd(cmdName))
+    {
+        return true;
+    }
+    else if (dispHostCmd(cmdName))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void About::listCmds(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, int largestCmd)
+{
+    QStringList cmdNames = cmdObjs->keys();
+
+    cmdNames.sort(Qt::CaseInsensitive);
+
+    for (int i = 0; i < cmdNames.size(); ++i)
+    {
+        wordWrap(cmdNames[i].leftJustified(largestCmd, ' ') + " - ", txtOut, cmdObjs->value(cmdNames[i])->shortText(), Shared::mainWidget);
+    }
+}
 
 void About::dataIn(const QString &argsLine)
 {
@@ -36,22 +106,7 @@ void About::dataIn(const QString &argsLine)
     {
         QString cmdName = args[0].toLower().trimmed();
 
-        if (Shared::clientCmds->contains(cmdName))
-        {
-            Command *obj = Shared::clientCmds->value(cmdName);
-            QString  txt;
-
-            QTextStream txtOut(&txt);
-
-            wordWrap("i/o:     ", txtOut, obj->ioText(), Shared::mainWidget);
-            txtOut << "" << endl;
-            wordWrap("library: ", txtOut, obj->libText(), Shared::mainWidget);
-            txtOut << "" << endl;
-            wordWrap("usage:   ", txtOut, obj->longText(), Shared::mainWidget);
-
-            emit mainTxtOut(txt);
-        }
-        else
+        if (!dispInfo(cmdName))
         {
             emit errTxtOut("err: No such command: '" + cmdName + "'\n");
         }
@@ -61,18 +116,14 @@ void About::dataIn(const QString &argsLine)
         QString     txt;
         QTextStream txtOut(&txt);
 
-        txtOut << libText()                                                                                    << endl << endl;
-        txtOut << "Based on QT " << QT_VERSION_STR << " " << 8 * QT_POINTER_SIZE << "bit"                      << endl << endl;
-        txtOut << "MRCI host support: " << MRCI_VERSION                                                        << endl << endl;
-        txtOut << "The program is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE"                  << endl;
-        txtOut << "WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE."                  << endl << endl;
-        txtOut << "note: In special cases when an internal client command is the same as a"                    << endl;
-        txtOut << "      remote command, start your command line with a '" << CMD_ESCAPE << "' to bypass the"  << endl;
-        txtOut << "      client's parsing."                                                                    << endl << endl;
-        txtOut << "usage: <command> <arguments>"                                                               << endl << endl;
-        txtOut << "<command>"                                                                                  << endl << endl;
+        txtOut << libText()                                                                   << endl << endl;
+        txtOut << "Based on QT " << QT_VERSION_STR << " " << 8 * QT_POINTER_SIZE << "bit"     << endl << endl;
+        txtOut << "The program is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE" << endl;
+        txtOut << "WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE." << endl << endl;
+        txtOut << "usage: <command> <arguments>"                                              << endl << endl;
+        txtOut << "<command>"                                                                 << endl << endl;
 
-        QStringList cmdNames   = Shared::clientCmds->keys();
+        QStringList cmdNames   = Shared::clientCmds->keys() + Shared::hostDocs->keys();
         int         largestCmd = 0;
 
         for (int i = 0; i < cmdNames.size(); ++i)
@@ -80,12 +131,8 @@ void About::dataIn(const QString &argsLine)
             if (cmdNames[i].size() > largestCmd) largestCmd = cmdNames[i].size();
         }
 
-        cmdNames.sort(Qt::CaseInsensitive);
-
-        for (int i = 0; i < cmdNames.size(); ++i)
-        {   
-            wordWrap(cmdNames[i].leftJustified(largestCmd, ' ') + " - ", txtOut, Shared::clientCmds->value(cmdNames[i])->shortText(), Shared::mainWidget);
-        }
+        listCmds(Shared::clientCmds, txtOut, largestCmd);
+        listCmds(Shared::hostDocs, txtOut, largestCmd);
 
         txtOut << endl << endl << "for more detailed information about a command type: about <command>" << endl << endl;
 

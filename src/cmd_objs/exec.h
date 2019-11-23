@@ -96,4 +96,42 @@ public slots:
     void dataIn(const QString &argsLine);
 };
 
+//----------------------------------------
+
+class Halt : public Command
+{
+    Q_OBJECT
+
+public:
+
+    QString shortText();
+    QString ioText();
+    QString longText();
+
+    explicit Halt(QObject *parent = nullptr);
+
+public slots:
+
+    void dataIn(const QString &argsLine);
+};
+
+//----------------------------------------
+
+class Resume : public Command
+{
+    Q_OBJECT
+
+public:
+
+    QString shortText();
+    QString ioText();
+    QString longText();
+
+    explicit Resume(QObject *parent = nullptr);
+
+public slots:
+
+    void dataIn(const QString &argsLine);
+};
+
 #endif // EXEC_H

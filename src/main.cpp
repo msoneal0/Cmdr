@@ -26,6 +26,7 @@
 #include "cmd_objs/info.h"
 #include "cmd_objs/exec.h"
 #include "cmd_objs/style.h"
+#include "cmd_objs/host_doc.h"
 #include "main_ui.h"
 #include "session.h"
 #include "gen_file.h"
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
     QStringList              hookBypass;
     QHash<quint16, QString>  genfileCmds;
     QHash<QString, Command*> clientCmds;
+    QHash<QString, Command*> hostDocs;
     QHash<quint16, QString>  hostCmds;
     QJsonObject              localData;
 
@@ -66,6 +68,7 @@ int main(int argc, char *argv[])
     Shared::genfileCmds     = &genfileCmds;
     Shared::clientCmds      = &clientCmds;
     Shared::hostCmds        = &hostCmds;
+    Shared::hostDocs        = &hostDocs;
     Shared::sessionId       = &sessionId;
     Shared::servMajor       = &servMajor;
     Shared::servMinor       = &servMinor;
@@ -95,6 +98,8 @@ int main(int argc, char *argv[])
     new About(&app);
     new EndSession(&app);
     new Term(&app);
+    new Halt(&app);
+    new Resume(&app);
     new SetColors(&app);
     new SetFont(&app);
     new SetMaxLines(&app);
@@ -153,6 +158,8 @@ void setupClientCmds()
         QObject::connect(command, &Command::unsetUserIO, cmdLine, &CmdLine::unsetFlags);
 
         QObject::connect(command, &Command::termHostCmd, session, &Session::termHostCmd);
+        QObject::connect(command, &Command::haltHostcmd, session, &Session::haltHostCmd);
+        QObject::connect(command, &Command::resumeHostCmd, session, &Session::resumeHostCmd);
         QObject::connect(command, &Command::connectToHost, session, &Session::connectToServ);
         QObject::connect(command, &Command::quitApp, session, &Session::disconnectFromServ);
         QObject::connect(command, &Command::disconnectHost, session, &Session::disconnectFromServ);
@@ -214,6 +221,9 @@ void setupSession()
     CmdLine  *cmdLine  = Shared::cmdLine;
     TextBody *textBody = Shared::textBody;
     Genfile  *genFile  = Shared::genFile;
+    QThread  *sesThr   = new QThread(nullptr);
+
+    QObject::connect(session, &Session::destroyed, sesThr, &QThread::quit);
 
     QObject::connect(session, &Session::hostFinished, genFile, &Genfile::finished);
     QObject::connect(session, &Session::toGenFile, genFile, &Genfile::hookedDataIn);
@@ -224,4 +234,9 @@ void setupSession()
     QObject::connect(session, &Session::bigTxtOut, textBody, &TextBody::addBigTxt);
     QObject::connect(session, &Session::mainTxtOut, textBody, &TextBody::addMainTxt);
     QObject::connect(session, &Session::errTxtOut, textBody, &TextBody::addErrTxt);
+
+    QObject::connect(sesThr, &QThread::finished, sesThr, &QThread::deleteLater);
+
+    session->moveToThread(sesThr);
+    sesThr->start();
 }

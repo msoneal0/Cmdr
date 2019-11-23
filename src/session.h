@@ -37,35 +37,12 @@
 
 #include "cmd_objs/command.h"
 #include "cmd_objs/bookmarks.h"
+#include "cmd_objs/host_doc.h"
 
 #define SERVER_HEADER_TAG "MRCI"
 #define CLIENT_HEADER_LEN 410
 #define SERVER_HEADER_LEN 35
-#define FRAME_HEADER_LEN  6
-
-#define ASYNC_RDY               1
-#define ASYNC_SYS_MSG           2
-#define ASYNC_EXE_CRASH         3
-#define ASYNC_TO_PEER           21
-#define ASYNC_LIMITED_CAST      22
-#define ASYNC_P2P               24
-#define ASYNC_NEW_CH_MEMBER     26
-#define ASYNC_DEL_CH            27
-#define ASYNC_RENAME_CH         28
-#define ASYNC_CH_ACT_FLAG       29
-#define ASYNC_NEW_SUB_CH        30
-#define ASYNC_RM_SUB_CH         31
-#define ASYNC_RENAME_SUB_CH     32
-#define ASYNC_INVITED_TO_CH     33
-#define ASYNC_RM_CH_MEMBER      34
-#define ASYNC_INVITE_ACCEPTED   35
-#define ASYNC_MEM_LEVEL_CHANGED 36
-#define ASYNC_SUB_CH_LEVEL_CHG  37
-#define ASYNC_ADD_RDONLY        38
-#define ASYNC_RM_RDONLY         39
-#define ASYNC_ADD_CMD           40
-#define ASYNC_RM_CMD            41
-#define ASYNC_USER_RENAMED      42
+#define FRAME_HEADER_LEN  8
 
 class Session : public QSslSocket
 {
@@ -73,14 +50,17 @@ class Session : public QSslSocket
 
 private:
 
-    uint    flags;
-    uint    dSize;
+    quint32 flags;
+    quint32 dSize;
     quint16 cmdId;
+    quint16 branId;
     quint16 hook;
-    uchar   dType;
+    quint8  dType;
     bool    reconnect;
 
     void dataFromHost(const QByteArray &data);
+    void procAsync(const QByteArray &data);
+    bool isAsync(quint16 id);
 
 private slots:
 
@@ -103,10 +83,12 @@ public:
 
 public slots:
 
-    void hookedBinToServer(const QByteArray &data, uchar typeId);
-    void binToServer(quint16 cmdId, const QByteArray &data, uchar typeId);
+    void hookedBinToServer(const QByteArray &data, quint8 typeId);
+    void binToServer(quint16 cmdId, const QByteArray &data, quint8 typeId);
     void enableGenFile(bool state);
     void termHostCmd();
+    void haltHostCmd();
+    void resumeHostCmd();
     void connectToServ();
     void disconnectFromServ();
 
@@ -115,6 +97,7 @@ signals:
     void hostFinished();
     void setUserIO(int flgs);
     void unsetUserIO(int flgs);
+    void hostCmdRemoved(quint16 id);
     void toGenFile(const QByteArray &data);
     void mainTxtOut(const QString &txt);
     void errTxtOut(const QString &txt);

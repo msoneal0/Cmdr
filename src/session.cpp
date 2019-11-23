@@ -16,7 +16,7 @@
 //    along with Cmdr under the LICENSE.md file. If not, see
 //    <http://www.gnu.org/licenses/>.
 
-Session::Session(QObject *parent) : QSslSocket(parent)
+Session::Session(QObject *parent) : QSslSocket(nullptr)
 {
     dSize     = 0;
     hook      = 0;
@@ -24,14 +24,17 @@ Session::Session(QObject *parent) : QSslSocket(parent)
     flags     = 0;
     reconnect = false;
 
-    connect(this, SIGNAL(encrypted()), this, SLOT(handShakeDone()));
-    connect(this, SIGNAL(connected()), this, SLOT(isConnected()));
-    connect(this, SIGNAL(disconnected()), this, SLOT(isDisconnected()));
-    connect(this, SIGNAL(readyRead()), this, SLOT(dataIn()));
+    connect(parent, &QSslSocket::destroyed, this, &Session::deleteLater);
+
+    connect(this, &Session::encrypted, this, &Session::handShakeDone);
+    connect(this, &Session::connected, this, &Session::isConnected);
+    connect(this, &Session::disconnected, this, &Session::isDisconnected);
+    connect(this, &Session::readyRead, this, &Session::dataIn);
+
     connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(sockerr(QAbstractSocket::SocketError)));
 }
 
-void Session::hookedBinToServer(const QByteArray &data, uchar typeId)
+void Session::hookedBinToServer(const QByteArray &data, quint8 typeId)
 {
     if (*Shared::connectedToHost)
     {
@@ -43,7 +46,7 @@ void Session::hookedBinToServer(const QByteArray &data, uchar typeId)
     }
 }
 
-void Session::binToServer(quint16 cmdId, const QByteArray &data, uchar typeId)
+void Session::binToServer(quint16 cmdId, const QByteArray &data, quint8 typeId)
 {
     if (*Shared::connectedToHost)
     {
@@ -78,26 +81,20 @@ void Session::sockerr(QAbstractSocket::SocketError err)
 
 void Session::isConnected()
 {
-    // client header format: [4bytes(tag)][2bytes(major)][2bytes(minor)][2bytes(patch)][128bytes(appName)][272bytes(coName)]
+    // client header format: [4bytes(tag)][134bytes(appName)][272bytes(coName)]
 
     // tag     = 0x4D, 0x52, 0x43, 0x49 (MRCI)
-    // major   = 16bit little endian int
-    // minor   = 16bit little endian int
-    // patch   = 16bit little endian int
-    // appName = UTF16LE string
-    // coName  = UTF16LE string
+    // appName = UTF16LE string (padded with 0x00)
+    // coName  = UTF16LE string (padded with 0x00)
 
     emit mainTxtOut("Connected.\n");
 
-    QByteArray  header;
-    QStringList ver = QString(MRCI_VERSION).split('.');
+    QByteArray header;
+    QString    appName = QString(APP_NAME) + " v" + QString(APP_VERSION);
 
     header.append(SERVER_HEADER_TAG);
-    header.append(wrInt(ver[0].toULongLong(), 16));
-    header.append(wrInt(ver[1].toULongLong(), 16));
-    header.append(wrInt(ver[2].toULongLong(), 16));
-    header.append(toTEXT(QString(QString(APP_NAME) + " v" + QString(APP_VERSION)).leftJustified(64, ' ', true)));
-    header.append(toTEXT(Shared::hostAddress->leftJustified(136, ' ', true)));
+    header.append(fixedToTEXT(appName, 134));
+    header.append(fixedToTEXT(*Shared::hostAddress, 272));
 
     if (header.size() == CLIENT_HEADER_LEN)
     {
@@ -189,7 +186,23 @@ void Session::termHostCmd()
 {
     if (hook != 0)
     {
-        binToServer(*Shared::termCmdId, wrInt(hook, 16), CMD_ID);
+        binToServer(hook, QByteArray(), TERM_CMD);
+    }
+}
+
+void Session::haltHostCmd()
+{
+    if (hook != 0)
+    {
+        binToServer(hook, QByteArray(), HALT_CMD);
+    }
+}
+
+void Session::resumeHostCmd()
+{
+    if (hook != 0)
+    {
+        binToServer(hook, QByteArray(), RESUME_CMD);
     }
 }
 
@@ -205,9 +218,31 @@ void Session::enableGenFile(bool state)
     }
 }
 
-void Session::dataFromHost(const QByteArray &data)
+bool Session::isAsync(quint16 id)
 {
-    if (cmdId == ASYNC_SYS_MSG)
+    return id < 256;
+}
+
+void Session::procAsync(const QByteArray &data)
+{
+    if (dType == TEXT)
+    {
+        if (cmdId == ASYNC_RDY)
+        {
+            hook = 0;
+        }
+
+        emit mainTxtOut(fromTEXT(data));
+    }
+    else if (dType == BIG_TEXT)
+    {
+        emit bigTxtOut(fromTEXT(data));
+    }
+    else if (dType == ERR)
+    {
+        emit errTxtOut(fromTEXT(data));
+    }
+    else if (cmdId == ASYNC_SYS_MSG)
     {
         if (dType == HOST_CERT)
         {
@@ -225,39 +260,21 @@ void Session::dataFromHost(const QByteArray &data)
             addCaCertificate(cert);
             startClientEncryption();
         }
-        else if (dType == TEXT)
-        {
-            emit mainTxtOut(fromTEXT(data));
-        }
-        else if (dType == BIG_TEXT)
-        {
-            emit bigTxtOut(fromTEXT(data));
-        }
-        else if (dType == ERR)
-        {
-            emit errTxtOut(fromTEXT(data));
-        }
     }
     else if (cmdId == ASYNC_ADD_CMD)
     {
-        if ((dType == NEW_CMD) && (data.size() >= 131))
+        if (dType == NEW_CMD)
         {
-            quint16 id      = static_cast<quint16>(rdInt(data.mid(0, 2)));
-            QString cmdName = fromTEXT(data.mid(3, 128)).trimmed();
+            auto *hostDoc = new HostDoc(data, this);
 
-            if (cmdName.toLower() == "term")
+            if (hostDoc->isValid())
             {
-                *Shared::termCmdId = id;
+                connect(this, &Session::disconnected, hostDoc, &HostDoc::sessionEnded);
+                connect(this, &Session::hostCmdRemoved, hostDoc, &HostDoc::cmdRemoved);
             }
-
-            if (!Shared::hostCmds->contains(id))
+            else
             {
-                Shared::hostCmds->insert(id, cmdName);
-
-                if (data[2])
-                {
-                    Shared::genfileCmds->insert(id, cmdName);
-                }
+                hostDoc->deleteLater();
             }
         }
     }
@@ -269,27 +286,18 @@ void Session::dataFromHost(const QByteArray &data)
 
             if (id == hook) hook = 0;
 
-            if (Shared::hostCmds->contains(id))
-            {
-                Shared::genfileCmds->remove(id);
-                Shared::hostCmds->remove(id);
-            }
+            emit hostCmdRemoved(id);
         }
     }
-    else if ((cmdId == ASYNC_RDY) || (cmdId == ASYNC_EXE_CRASH))
-    {
-        hook = 0;
+}
 
-        if (dType == TEXT)
-        {
-            emit mainTxtOut(fromTEXT(data));
-        }
-        else if (dType == ERR)
-        {
-            emit errTxtOut(fromTEXT(data));
-        }
+void Session::dataFromHost(const QByteArray &data)
+{
+    if (isAsync(cmdId))
+    {
+        procAsync(data);
     }
-    else if ((cmdId == hook) && (hook != 0))
+    else if ((cmdId == hook) && (branId == 0) && (hook != 0))
     {
         if ((dType == TEXT) || (dType == PRIV_TEXT))
         {
@@ -349,9 +357,10 @@ void Session::dataIn()
         {
             QByteArray header = read(FRAME_HEADER_LEN);
 
-            dType  = static_cast<uchar>(header[0]);
+            dType  = static_cast<quint8>(header[0]);
             cmdId  = static_cast<quint16>(rdInt(header.mid(1, 2)));
-            dSize  = static_cast<uint>(rdInt(header.mid(3, 3)));
+            branId = static_cast<quint16>(rdInt(header.mid(3, 2)));
+            dSize  = static_cast<quint32>(rdInt(header.mid(5, 3)));
             flags |= DSIZE_RDY;
 
             dataIn();
@@ -369,17 +378,17 @@ void Session::dataIn()
         // minor = 16bit little endian uint (host ver minor)
         // patch = 16bit little endian uint (host ver patch)
 
-        uchar reply = static_cast<uchar>(rdInt(read(1)));
+        quint8 reply = static_cast<quint8>(rdInt(read(1)));
 
         if ((reply == 1) || (reply == 2))
         {
-            *Shared::servMajor = static_cast<ushort>(rdInt(read(2)));
-            *Shared::servMinor = static_cast<ushort>(rdInt(read(2)));
-            *Shared::servPatch = static_cast<ushort>(rdInt(read(2)));
+            *Shared::servMajor = static_cast<quint16>(rdInt(read(2)));
+            *Shared::servMinor = static_cast<quint16>(rdInt(read(2)));
+            *Shared::servPatch = static_cast<quint16>(rdInt(read(2)));
 
             emit mainTxtOut("Detected host version: " + verText(*Shared::servMajor, *Shared::servMinor, *Shared::servPatch) + "\n");
 
-            if (*Shared::servMajor == 1)
+            if (*Shared::servMajor == 2)
             {
                 *Shared::sessionId       = read(28);
                 *Shared::connectedToHost = true;
@@ -403,10 +412,6 @@ void Session::dataIn()
 
                 disconnectFromHost();
             }
-        }
-        else if (reply == 3)
-        {
-            emit errTxtOut("err: Client version rejected by the host.\n");
         }
         else if (reply == 4)
         {

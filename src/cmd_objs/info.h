@@ -25,6 +25,14 @@ class About : public Command
 {
     Q_OBJECT
 
+private:
+
+    void dispInfo(Command *cmdObj);
+    void listCmds(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, int largestCmd);
+    bool dispInfo(const QString &cmdName);
+    bool dispClientCmd(const QString &cmdName);
+    bool dispHostCmd(const QString &cmdName);
+
 public:
 
     QString shortText();

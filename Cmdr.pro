@@ -42,6 +42,7 @@ LIBS += -lcrypto -lssl
 
 SOURCES += src/main.cpp \
            src/cmd_line.cpp \
+           src/cmd_objs/host_doc.cpp \
            src/common.cpp \
            src/main_ui.cpp \
            src/session.cpp \
@@ -56,6 +57,7 @@ SOURCES += src/main.cpp \
 
 HEADERS += src/session.h \
            src/cmd_line.h \
+           src/cmd_objs/host_doc.h \
            src/common.h \
            src/gen_file.h \
            src/main_ui.h \

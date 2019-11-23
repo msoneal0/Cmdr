@@ -1,5 +1,5 @@
-#ifndef TEXT_BODY_H
-#define TEXT_BODY_H
+#ifndef HOST_DOC_H
+#define HOST_DOC_H
 
 //    This file is part of Cmdr.
 
@@ -17,42 +17,38 @@
 //    along with Cmdr under the LICENSE.md file. If not, see
 //    <http://www.gnu.org/licenses/>.
 
-#include "common.h"
+#include "command.h"
 
-class TextBody : public QTextEdit
+class HostDoc : public Command
 {
     Q_OBJECT
 
 private:
 
-    enum TextType
-    {
-        ERROR,
-        MAIN
-    };
+    QString shortTxt;
+    QString ioTxt;
+    QString longTxt;
+    QString libTxt;
+    quint16 cmdId;
+    bool    valid;
 
-    QTextDocument *txtDocument;
-    QTextCursor   *txtCursor;
-    QJsonObject   *localData;
-    QString        errColor;
-    QString        mainColor;
-
-    QString htmlEsc(const QString &txt);
-    void    loadTextBodySettings();
-    void    contextMenuEvent(QContextMenuEvent *event);
-    void    addTextBlock(const QString &txt, const QString &color);
+    QString readNullTermText(const QByteArray &data, quint32 *offs);
 
 public:
 
-    explicit TextBody(QWidget *parent = nullptr);
+    QString shortText();
+    QString ioText();
+    QString longText();
+    QString libText();
+
+    explicit HostDoc(const QByteArray &import, QObject *parent = nullptr);
+
+    bool isValid();
 
 public slots:
 
-    void addMainTxt(const QString &txt);
-    void addErrTxt(const QString &txt);
-    void addBigTxt(const QString &txt);
-    void setMaxLines(int value);
-    void reload();
+    void cmdRemoved(quint16 id);
+    void sessionEnded();
 };
 
-#endif // TEXT_BODY_H
+#endif // HOST_DOC_H

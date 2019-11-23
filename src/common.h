@@ -68,35 +68,70 @@
 #define DEFAULT_HIST_LIMIT 100
 #define DEFAULT_MAX_LINES  5000
 #define RDBUFF             128000
-#define CMD_ESCAPE         '#'
 #define TXT_CODEC          "UTF-16LE"
 #define BOOKMARK_FOLDER    "bookmarks"
 #define CONFIG_FILENAME    "config.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "1.0.0"
-#define MRCI_VERSION       "1.0.0"
+#define APP_VERSION        "2.0.0"
 
-enum TypeID
+enum TypeID : quint8
 {
-    GEN_FILE    = 30,
-    TEXT        = 31,
-    ERR         = 32,
-    PRIV_TEXT   = 33,
-    IDLE        = 34,
-    HOST_CERT   = 35,
-    FILE_INFO   = 36,
-    PEER_INFO   = 37,
-    MY_INFO     = 38,
-    PEER_STAT   = 39,
-    P2P_REQUEST = 40,
-    P2P_CLOSE   = 41,
-    P2P_OPEN    = 42,
-    BYTES       = 43,
-    SESSION_ID  = 44,
-    NEW_CMD     = 45,
-    CMD_ID      = 46,
-    BIG_TEXT    = 47
+    GEN_FILE              = 1,
+    TEXT                  = 2,
+    ERR                   = 3,
+    PRIV_TEXT             = 4,
+    IDLE                  = 5,
+    HOST_CERT             = 6,
+    FILE_INFO             = 7,
+    PEER_INFO             = 8,
+    MY_INFO               = 9,
+    PEER_STAT             = 10,
+    P2P_REQUEST           = 11,
+    P2P_CLOSE             = 12,
+    P2P_OPEN              = 13,
+    BYTES                 = 14,
+    SESSION_ID            = 15,
+    NEW_CMD               = 16,
+    CMD_ID                = 17,
+    BIG_TEXT              = 18,
+    TERM_CMD              = 19,
+    HOST_VER              = 20,
+    PRIV_IPC              = 21,
+    PUB_IPC               = 22,
+    PUB_IPC_WITH_FEEDBACK = 23,
+    PING_PEERS            = 24,
+    CH_MEMBER_INFO        = 25,
+    CH_ID                 = 26,
+    KILL_CMD              = 27,
+    HALT_CMD              = 28,
+    RESUME_CMD            = 29
+};
+
+enum AsyncCommands : quint16
+{
+    ASYNC_RDY               = 1,   // client   | none
+    ASYNC_SYS_MSG           = 2,   // client   | none
+    ASYNC_CAST              = 4,   // client   | public
+    ASYNC_USER_DELETED      = 7,   // client   | public
+    ASYNC_TO_PEER           = 16,  // client   | public  | retricted
+    ASYNC_LIMITED_CAST      = 17,  // client   | public
+    ASYNC_P2P               = 19,  // client   | public
+    ASYNC_NEW_CH_MEMBER     = 21,  // client   | public
+    ASYNC_DEL_CH            = 22,  // client   | public
+    ASYNC_RENAME_CH         = 23,  // client   | public
+    ASYNC_NEW_SUB_CH        = 25,  // client   | public
+    ASYNC_RM_SUB_CH         = 26,  // client   | public
+    ASYNC_RENAME_SUB_CH     = 27,  // client   | public
+    ASYNC_INVITED_TO_CH     = 28,  // client   | public
+    ASYNC_RM_CH_MEMBER      = 29,  // client   | public
+    ASYNC_INVITE_ACCEPTED   = 30,  // client   | public
+    ASYNC_MEM_LEVEL_CHANGED = 31,  // client   | public
+    ASYNC_SUB_CH_LEVEL_CHG  = 32,  // client   | public
+    ASYNC_ADD_RDONLY        = 33,  // client   | public
+    ASYNC_RM_RDONLY         = 34,  // client   | public
+    ASYNC_ADD_CMD           = 35,  // client   | none
+    ASYNC_RM_CMD            = 36,  // client   | none
 };
 
 enum ChannelMemberLevel
@@ -125,6 +160,7 @@ bool        argExists(const QString &key, const QStringList &args);
 QByteArray  wrInt(quint64 num, int numOfBits);
 QByteArray  wrFrame(quint16 cmdId, const QByteArray &data, uchar dType);
 QByteArray  toTEXT(const QString &txt);
+QByteArray  fixedToTEXT(const QString &txt, int len);
 QStringList parseArgs(const QByteArray &data, int maxArgs);
 QStringList parseArgs(const QString &line);
 QString     fromTEXT(const QByteArray &txt);
@@ -142,6 +178,7 @@ class MainWindow;
 class Session;
 class TextBody;
 class ContextReloader;
+class HostDoc;
 
 class Shared : public QObject
 {
@@ -162,6 +199,7 @@ public:
     static QHash<QString, Command*> *clientCmds;
     static QHash<quint16, QString>  *hostCmds;
     static QHash<quint16, QString>  *genfileCmds;
+    static QHash<QString, Command*> *hostDocs;
     static QJsonObject              *localData;
     static quint16                  *termCmdId;
     static CmdLine                  *cmdLine;
