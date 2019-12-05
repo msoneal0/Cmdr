@@ -91,7 +91,7 @@ void SaveBookmark::run(const QString &name, QStringList &args)
     }
     else
     {
-        emit errTxtOut("err: Could not open the bookmark file for writing, reason: " + file.errorString() + "\n");
+        cacheTxt(ERR, "err: Could not open the bookmark file for writing, reason: " + file.errorString() + "\n");
     }
 
     file.close();
@@ -99,7 +99,8 @@ void SaveBookmark::run(const QString &name, QStringList &args)
 
 void SaveBookmark::askOverwrite()
 {
-    emit mainTxtOut("'" + baseName + "' already exists. do you want to overwrite? (y/n): ");
+    cacheTxt(TEXT, "'" + baseName + "' already exists. do you want to overwrite? (y/n): ");
+
     emit setUserIO(LOCAL_HOOK);
 }
 
@@ -129,7 +130,7 @@ void SaveBookmark::dataIn(const QString &argsLine)
 
         if (name.isEmpty())
         {
-            emit errTxtOut("err: Bookmark name (-name) not given.\n");
+            cacheTxt(ERR, "err: Bookmark name (-name) not given.\n");
         }
         else
         {
@@ -151,21 +152,21 @@ void SaveBookmark::dataIn(const QString &argsLine)
 
 void ListBookmarks::dataIn(const QString &argsLine)
 {
-    Q_UNUSED(argsLine);
+    Q_UNUSED(argsLine)
 
     QStringList list = QDir(appDataDir() + BOOKMARK_FOLDER).entryList(QStringList() << "*.json", QDir::Files, QDir::Name);
 
     if (list.isEmpty())
     {
-        emit mainTxtOut("Empty...\n");
+        cacheTxt(TEXT, "Empty...\n");
     }
     else
     {
-        emit mainTxtOut("Bookmarks:\n\n");
+        cacheTxt(TEXT, "Bookmarks:\n\n");
 
         for (int i = 0; i < list.size(); ++i)
         {
-            emit mainTxtOut(" " + QFileInfo(list[i]).baseName() + "\n");
+            cacheTxt(TEXT, " " + QFileInfo(list[i]).baseName() + "\n");
         }
     }
 }
@@ -177,7 +178,7 @@ void DeleteBookmark::dataIn(const QString &argsLine)
 
     if (name.isEmpty())
     {
-        emit errTxtOut("err: Bookmark name (-name) not given.\n");
+        cacheTxt(ERR, "err: Bookmark name (-name) not given.\n");
     }
     else
     {
@@ -185,7 +186,7 @@ void DeleteBookmark::dataIn(const QString &argsLine)
 
         if (!QFile::remove(path))
         {
-            emit errTxtOut("err: Could not delete the bookmark, the file might not exist or you don't have write permissions.\n");
+            cacheTxt(ERR, "err: Could not delete the bookmark, the file might not exist or you don't have write permissions.\n");
         }
     }
 }
@@ -197,7 +198,7 @@ void SeeBookmark::dataIn(const QString &argsLine)
 
     if (name.isEmpty())
     {
-        emit errTxtOut("err: Bookmark name (-name) not given.\n");
+        cacheTxt(ERR, "err: Bookmark name (-name) not given.\n");
     }
     else
     {
@@ -209,12 +210,12 @@ void SeeBookmark::dataIn(const QString &argsLine)
         {
             QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
 
-            emit mainTxtOut("address: " + doc.object().value("address").toString() + "\n");
-            emit mainTxtOut("port:    " + QString::number(doc.object().value("port").toInt()) + "\n");
+            cacheTxt(TEXT, "address: " + doc.object().value("address").toString() + "\n");
+            cacheTxt(TEXT, "port:    " + QString::number(doc.object().value("port").toInt()) + "\n");
         }
         else
         {
-            emit errTxtOut("err: Could not open the requested bookmark file for reading, reason: " + file.errorString() + '\n');
+            cacheTxt(ERR, "err: Could not open the requested bookmark file for reading, reason: " + file.errorString() + '\n');
         }
 
         file.close();

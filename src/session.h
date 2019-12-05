@@ -58,6 +58,7 @@ private:
     quint8  dType;
     bool    reconnect;
 
+    void cacheTxt(quint8 typeId, QString txt);
     void dataFromHost(const QByteArray &data);
     void procAsync(const QByteArray &data);
     bool isAsync(quint16 id);
@@ -95,13 +96,12 @@ public slots:
 signals:
 
     void hostFinished();
+    void txtInCache();
+    void loopDataIn();
     void setUserIO(int flgs);
     void unsetUserIO(int flgs);
     void hostCmdRemoved(quint16 id);
     void toGenFile(const QByteArray &data);
-    void mainTxtOut(const QString &txt);
-    void errTxtOut(const QString &txt);
-    void bigTxtOut(const QString &txt);
 };
 
 #endif // SOCKET_H

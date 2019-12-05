@@ -66,5 +66,5 @@ void Status::dataIn(const QString &argsLine)
         }
     }
 
-    emit mainTxtOut(txt);
+    cacheTxt(TEXT, txt);
 }

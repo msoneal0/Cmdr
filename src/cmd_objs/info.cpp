@@ -39,7 +39,7 @@ void About::dispInfo(Command *cmdObj)
     txtOut << "" << endl;
     wordWrap("usage:   ", txtOut, cmdObj->longText(), Shared::mainWidget);
 
-    emit mainTxtOut(txt);
+    cacheTxt(TEXT, txt);
 }
 
 bool About::dispClientCmd(const QString &cmdName)
@@ -108,7 +108,7 @@ void About::dataIn(const QString &argsLine)
 
         if (!dispInfo(cmdName))
         {
-            emit errTxtOut("err: No such command: '" + cmdName + "'\n");
+            cacheTxt(ERR, "err: No such command: '" + cmdName + "'\n");
         }
     }
     else
@@ -136,7 +136,7 @@ void About::dataIn(const QString &argsLine)
 
         txtOut << endl << endl << "for more detailed information about a command type: about <command>" << endl << endl;
 
-        emit mainTxtOut(txt);
+        cacheTxt(TEXT, txt);
     }
 }
 

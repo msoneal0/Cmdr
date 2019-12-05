@@ -21,15 +21,22 @@ Command::Command(QObject *parent) : QObject(parent)
     // the QObject::objectName property determines the command
     // name for any object inheriting this object. avoid using
     // spaces and keep in mind that all command names are case
-    // insensitive. avoid starting the command with the char
-    // defined in CMD_ESCAPE, this char is used to send
-    // commands directly to the host in case of naming
-    // conflicts with the host commands.
+    // insensitive.
 
     setObjectName("do_nothing");
 
     connect(this, &Command::setUserIO, this, &Command::setHook);
     connect(this, &Command::unsetUserIO, this, &Command::unsetHook);
+}
+
+void Command::cacheTxt(quint8 typeId, QString txt)
+{
+    Shared::cacheTxt(Shared::TXT_IN, typeId, txt);
+
+    if (!(*Shared::activeDisp))
+    {
+        emit txtInCache();
+    }
 }
 
 void Command::setHook(int flgs)
@@ -112,5 +119,5 @@ void Command::hookedCmdCall(const QString &argsLine)
 
 void Command::postExec()
 {
-    emit mainTxtOut("\nFinished: " + objectName() + "\n\n");
+    cacheTxt(TEXT, "\nFinished: " + objectName() + "\n\n");
 }

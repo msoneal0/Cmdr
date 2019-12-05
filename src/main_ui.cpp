@@ -75,6 +75,13 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     QMainWindow::resizeEvent(event);
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    emit closeApp();
+
+    event->ignore();
+}
+
 void MainWindow::setCmdLine(QWidget *widget)
 {
     widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);

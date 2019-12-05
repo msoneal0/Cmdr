@@ -43,6 +43,16 @@ CmdLine::CmdLine(QWidget *parent) : QComboBox(parent)
     connect(lineEdit(), SIGNAL(textEdited(QString)), this, SLOT(checkForHistReset(QString)));
 }
 
+void CmdLine::cacheTxt(quint8 typeId, QString txt)
+{
+    Shared::cacheTxt(Shared::TXT_IN, typeId, txt);
+
+    if (!(*Shared::activeDisp))
+    {
+        emit txtInCache();
+    }
+}
+
 void CmdLine::setFlags(int flgs)
 {
     flags |= flgs;
@@ -50,7 +60,7 @@ void CmdLine::setFlags(int flgs)
 
 void CmdLine::unsetFlags(int flgs)
 {
-    flags ^= flgs;
+    flags &= ~flgs;
 }
 
 void CmdLine::selectionCheck()
@@ -105,7 +115,7 @@ void CmdLine::echo(const QString &line)
 {
     if (!line.trimmed().isEmpty())
     {
-        emit mainTxtOut(line + "\n\n");
+        cacheTxt(TEXT, line + "\n\n");
     }
 }
 
@@ -162,7 +172,7 @@ void CmdLine::toHost(const QString &cmdName, const QString &args)
 
         if (!Shared::hostCmds->values().contains(cmdName))
         {
-            emit errTxtOut("err: No such command: " + cmdName + "\n\n");
+            cacheTxt(ERR, "err: No such command: " + cmdName + "\n\n");
         }
         else if (Shared::genfileCmds->contains(cmdId))
         {

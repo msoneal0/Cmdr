@@ -31,6 +31,7 @@ private slots:
 protected:
 
     bool activeHook();
+    void cacheTxt(quint8 typeId, QString txt);
 
 public:
 
@@ -54,9 +55,6 @@ public slots:
 
 signals:
 
-    void mainTxtOut(const QString &txt);
-    void errTxtOut(const QString &txt);
-    void bigTxtOut(const QString &txt);
     void setUserIO(int flgs);
     void unsetUserIO(int flgs);
     void setMaxLines(int value);
@@ -68,6 +66,7 @@ signals:
     void disconnectHost();
     void colorsChanged();
     void fontChanged();
+    void txtInCache();
 };
 
 #endif // COMMAND_H

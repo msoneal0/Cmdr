@@ -62,18 +62,19 @@
 #include <QFile>
 #include <QRegExp>
 #include <QFileInfo>
+#include <QMutex>
 
 #include "cmd_objs/long_txt.h"
 
 #define DEFAULT_HIST_LIMIT 100
-#define DEFAULT_MAX_LINES  5000
+#define DEFAULT_MAX_LINES  1000
 #define RDBUFF             128000
 #define TXT_CODEC          "UTF-16LE"
 #define BOOKMARK_FOLDER    "bookmarks"
 #define CONFIG_FILENAME    "config.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "2.0.0"
+#define APP_VERSION        "2.1.0"
 
 enum TypeID : quint8
 {
@@ -177,8 +178,10 @@ class Genfile;
 class MainWindow;
 class Session;
 class TextBody;
+class TextWorker;
 class ContextReloader;
 class HostDoc;
+class ThreadKiller;
 
 class Shared : public QObject
 {
@@ -187,6 +190,7 @@ class Shared : public QObject
 public:
 
     static bool                     *connectedToHost;
+    static bool                     *activeDisp;
     static QByteArray               *sessionId;
     static ushort                   *servMajor;
     static ushort                   *servMinor;
@@ -200,6 +204,8 @@ public:
     static QHash<quint16, QString>  *hostCmds;
     static QHash<quint16, QString>  *genfileCmds;
     static QHash<QString, Command*> *hostDocs;
+    static QList<quint8>            *idCache;
+    static QList<QString>           *txtCache;
     static QJsonObject              *localData;
     static quint16                  *termCmdId;
     static CmdLine                  *cmdLine;
@@ -207,8 +213,21 @@ public:
     static MainWindow               *mainWin;
     static Session                  *session;
     static TextBody                 *textBody;
+    static TextWorker               *textWorker;
     static ContextReloader          *contextReloader;
     static QWidget                  *mainWidget;
+    static ThreadKiller             *theadKiller;
+
+    enum CacheOp
+    {
+        TXT_IN,
+        TXT_OUT,
+        TXT_CLEAR,
+        TXT_IS_EMPTY
+    };
+
+    static bool cacheTxt(CacheOp op);
+    static bool cacheTxt(CacheOp op, quint8 &typeId, QString &txt);
 
     explicit Shared(QObject *parent = nullptr);
 };
@@ -224,6 +243,27 @@ public:
 public slots:
 
     void reloadCmdLine();
+};
+
+class ThreadKiller : public QObject
+{
+    Q_OBJECT
+
+private:
+
+    int threadCount;
+
+public:
+
+    explicit ThreadKiller(QObject *parent = nullptr);
+
+public slots:
+
+    void threadFinished();
+
+signals:
+
+    void quitThreads();
 };
 
 

@@ -29,6 +29,7 @@ private:
     QVBoxLayout *mainLayout;
 
     void resizeEvent(QResizeEvent *event);
+    void closeEvent(QCloseEvent *event);
     void saveWindowSize();
 
 public:
@@ -42,6 +43,7 @@ public:
 signals:
 
     void startup();
+    void closeApp();
 };
 
 #endif // USER_IO_H

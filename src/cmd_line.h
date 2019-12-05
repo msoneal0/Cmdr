@@ -35,6 +35,7 @@ private:
     void    echo(const QString &line);
     void    syncHistToFile();
     void    syncHistFromFile();
+    void    cacheTxt(quint8 typeId, QString txt);
     void    duplicateScan(const QString &txt);
     void    toHost(const QString &cmdName, const QString &args);
     void    toLocalCmd(const QString &cmdName, const QString &args);
@@ -64,8 +65,7 @@ signals:
     void dataToHookedHost(const QByteArray &data, uchar dType);
     void dataToGenFile(quint16 cmdId, const QByteArray &data);
     void dataToHookedGenFile(const QByteArray &data);
-    void mainTxtOut(const QString &txt);
-    void errTxtOut(const QString &txt);
+    void txtInCache();
 };
 
 #endif // CMDLINE_H

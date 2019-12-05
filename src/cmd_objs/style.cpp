@@ -117,9 +117,9 @@ void SetColors::dataIn(const QString &argsLine)
 
     QJsonObject obj = localData->value("text_settings").toObject();
 
-    emit mainTxtOut("text:  " + obj.value("text_color").toString() + "\n");
-    emit mainTxtOut("error: " + obj.value("err_color").toString() + "\n");
-    emit mainTxtOut("bg:    " + obj.value("bg_color").toString() + "\n");
+    cacheTxt(TEXT, "text:  " + obj.value("text_color").toString() + "\n");
+    cacheTxt(TEXT, "error: " + obj.value("err_color").toString() + "\n");
+    cacheTxt(TEXT, "bg:    " + obj.value("bg_color").toString() + "\n");
 
     if (changed) emit colorsChanged();
 }
@@ -134,8 +134,8 @@ void SetFont::dataIn(const QString &argsLine)
 
     QJsonObject obj = localData->value("text_settings").toObject();
 
-    emit mainTxtOut("family: " + obj.value("font_family").toString() + "\n");
-    emit mainTxtOut("size:   " + obj.value("font_size").toString() + "\n");
+    cacheTxt(TEXT, "family: " + obj.value("font_family").toString() + "\n");
+    cacheTxt(TEXT, "size:   " + obj.value("font_size").toString() + "\n");
 
     if (changed) emit fontChanged();
 }
@@ -147,7 +147,7 @@ void SetMaxLines::dataIn(const QString &argsLine)
 
     if (valStr.isEmpty())
     {
-        emit mainTxtOut(QString::number(localData->value("max_lines").toInt()) + "\n");
+        cacheTxt(TEXT, QString::number(localData->value("max_lines").toInt()) + "\n");
     }
     else
     {
@@ -156,11 +156,11 @@ void SetMaxLines::dataIn(const QString &argsLine)
 
         if (!ok)
         {
-            emit errTxtOut("err: '" + valStr + "' is not a valid integer.\n");
+            cacheTxt(ERR, "err: '" + valStr + "' is not a valid integer.\n");
         }
         else if ((val < 50) || (val > 100000))
         {
-            emit errTxtOut("err: The value must range 50 - 100000.\n");
+            cacheTxt(ERR, "err: The value must range 50 - 100000.\n");
         }
         else
         {

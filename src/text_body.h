@@ -19,28 +19,53 @@
 
 #include "common.h"
 
+class TextWorker : public QObject
+{
+    Q_OBJECT
+
+private:
+
+    QJsonObject *localData;
+    QString      errColor;
+    QString      mainColor;
+
+    QString htmlEsc(const QString &txt);
+    void    toHtmlLines(const QString &txt, const QString &color);
+    void    addMainTxt(const QString &txt);
+    void    addErrTxt(const QString &txt);
+    void    addBigTxt(const QString &txt);
+
+public:
+
+    explicit TextWorker(QObject *parent = nullptr);
+
+public slots:
+
+    void loadSettings();
+    void dumpTxtCache();
+
+signals:
+
+    void htmlOut(const QString &line, bool lastLine);
+    void setUserIO(int flgs);
+    void unsetUserIO(int flgs);
+    void loop();
+};
+
+//-----------------------------------------
+
 class TextBody : public QTextEdit
 {
     Q_OBJECT
 
 private:
 
-    enum TextType
-    {
-        ERROR,
-        MAIN
-    };
-
     QTextDocument *txtDocument;
     QTextCursor   *txtCursor;
     QJsonObject   *localData;
-    QString        errColor;
-    QString        mainColor;
 
-    QString htmlEsc(const QString &txt);
-    void    loadTextBodySettings();
-    void    contextMenuEvent(QContextMenuEvent *event);
-    void    addTextBlock(const QString &txt, const QString &color);
+    void loadTextBodySettings();
+    void contextMenuEvent(QContextMenuEvent *event);
 
 public:
 
@@ -48,9 +73,7 @@ public:
 
 public slots:
 
-    void addMainTxt(const QString &txt);
-    void addErrTxt(const QString &txt);
-    void addBigTxt(const QString &txt);
+    void htmlIn(const QString &line, bool lastLine);
     void setMaxLines(int value);
     void reload();
 };

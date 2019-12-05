@@ -37,6 +37,7 @@ void setupClientCmds();
 void setupCmdLine();
 void setupGenFile();
 void setupSession();
+void setupText();
 
 int main(int argc, char *argv[])
 {
@@ -46,6 +47,7 @@ int main(int argc, char *argv[])
     app.setApplicationVersion(APP_VERSION);
 
     bool                     connected   = false;
+    bool                     activeDisp  = false;
     ushort                   servMajor   = 0;
     ushort                   servMinor   = 0;
     ushort                   servPatch   = 0;
@@ -59,6 +61,8 @@ int main(int argc, char *argv[])
     QHash<QString, Command*> clientCmds;
     QHash<QString, Command*> hostDocs;
     QHash<quint16, QString>  hostCmds;
+    QList<quint8>            idCache;
+    QList<QString>           txtCache;
     QJsonObject              localData;
 
     loadLocalData(&localData);
@@ -79,9 +83,14 @@ int main(int argc, char *argv[])
     Shared::termCmdId       = &termCmdId;
     Shared::localData       = &localData;
     Shared::clientHookedCmd = &clientHookCmd;
+    Shared::idCache         = &idCache;
+    Shared::txtCache        = &txtCache;
+    Shared::activeDisp      = &activeDisp;
     Shared::contextReloader = new ContextReloader(&app);
+    Shared::theadKiller     = new ThreadKiller(&app);
     Shared::session         = new Session(&app);
     Shared::mainWin         = new MainWindow();
+    Shared::textWorker      = new TextWorker(&app);
     Shared::textBody        = new TextBody(Shared::mainWin);
     Shared::cmdLine         = new CmdLine(Shared::mainWin);
     Shared::genFile         = new Genfile(&app);
@@ -109,6 +118,7 @@ int main(int argc, char *argv[])
     setupCmdLine();
     setupGenFile();
     setupSession();
+    setupText();
 
     Shared::mainWin->setTextBody(Shared::textBody);
     Shared::mainWin->setCmdLine(Shared::cmdLine);
@@ -138,18 +148,21 @@ void ContextReloader::reloadCmdLine()
 
 void setupClientCmds()
 {
-    Session         *session  = Shared::session;
-    CmdLine         *cmdLine  = Shared::cmdLine;
-    TextBody        *textBody = Shared::textBody;
-    Genfile         *genFile  = Shared::genFile;
-    MainWindow      *mainWin  = Shared::mainWin;
-    ContextReloader *reloader = Shared::contextReloader;
+    Session         *session    = Shared::session;
+    CmdLine         *cmdLine    = Shared::cmdLine;
+    TextWorker      *textWorker = Shared::textWorker;
+    TextBody        *textBody   = Shared::textBody;
+    Genfile         *genFile    = Shared::genFile;
+    MainWindow      *mainWin    = Shared::mainWin;
+    ContextReloader *reloader   = Shared::contextReloader;
+    ThreadKiller    *killer     = Shared::theadKiller;
+
+    QObject::connect(mainWin, &MainWindow::closeApp, killer, &ThreadKiller::quitThreads);
 
     for (auto command : Shared::clientCmds->values())
     {
-        QObject::connect(command, &Command::mainTxtOut, textBody, &TextBody::addMainTxt);
-        QObject::connect(command, &Command::errTxtOut, textBody, &TextBody::addErrTxt);
-        QObject::connect(command, &Command::bigTxtOut, textBody, &TextBody::addBigTxt);
+        QObject::connect(command, &Command::colorsChanged, textWorker, &TextWorker::loadSettings);
+        QObject::connect(command, &Command::txtInCache, textWorker, &TextWorker::dumpTxtCache);
 
         QObject::connect(cmdLine, &CmdLine::dataToCommandObj, command, &Command::cmdCall);
         QObject::connect(cmdLine, &CmdLine::dataToHookedCmdObj, command, &Command::hookedCmdCall);
@@ -164,7 +177,7 @@ void setupClientCmds()
         QObject::connect(command, &Command::quitApp, session, &Session::disconnectFromServ);
         QObject::connect(command, &Command::disconnectHost, session, &Session::disconnectFromServ);
 
-        QObject::connect(command, &Command::quitApp, QCoreApplication::instance(), &QCoreApplication::quit);
+        QObject::connect(command, &Command::quitApp, killer, &ThreadKiller::quitThreads);
 
         QObject::connect(command, &Command::termHostCmd, genFile, &Genfile::finished);
         QObject::connect(command, &Command::quitApp, genFile, &Genfile::finished);
@@ -182,27 +195,28 @@ void setupClientCmds()
 
 void setupCmdLine()
 {
-    Session  *session  = Shared::session;
-    CmdLine  *cmdLine  = Shared::cmdLine;
-    TextBody *textBody = Shared::textBody;
-    Genfile  *genFile  = Shared::genFile;
+    Session    *session    = Shared::session;
+    CmdLine    *cmdLine    = Shared::cmdLine;
+    TextWorker *textWorker = Shared::textWorker;
+    Genfile    *genFile    = Shared::genFile;
 
     QObject::connect(cmdLine, &CmdLine::dataToHost, session, &Session::binToServer);
     QObject::connect(cmdLine, &CmdLine::dataToHookedHost, session, &Session::hookedBinToServer);
 
-    QObject::connect(cmdLine, &CmdLine::mainTxtOut, textBody, &TextBody::addMainTxt);
-    QObject::connect(cmdLine, &CmdLine::errTxtOut, textBody, &TextBody::addErrTxt);
-
     QObject::connect(cmdLine, &CmdLine::dataToGenFile, genFile, &Genfile::dataIn);
     QObject::connect(cmdLine, &CmdLine::dataToHookedGenFile, genFile, &Genfile::hookedDataIn);
+
+    QObject::connect(cmdLine, &CmdLine::txtInCache, textWorker, &TextWorker::dumpTxtCache);
 }
 
 void setupGenFile()
 {
-    Session  *session  = Shared::session;
-    CmdLine  *cmdLine  = Shared::cmdLine;
-    TextBody *textBody = Shared::textBody;
-    Genfile  *genFile  = Shared::genFile;
+    Session      *session    = Shared::session;
+    CmdLine      *cmdLine    = Shared::cmdLine;
+    TextWorker   *textWorker = Shared::textWorker;
+    Genfile      *genFile    = Shared::genFile;
+    ThreadKiller *killer     = Shared::theadKiller;
+    QThread      *genThr     = new QThread(QCoreApplication::instance());
 
     QObject::connect(genFile, &Genfile::dataOut, session, &Session::binToServer);
     QObject::connect(genFile, &Genfile::hookedDataOut, session, &Session::hookedBinToServer);
@@ -211,19 +225,23 @@ void setupGenFile()
     QObject::connect(genFile, &Genfile::setUserIO, cmdLine, &CmdLine::setFlags);
     QObject::connect(genFile, &Genfile::unsetUserIO, cmdLine, &CmdLine::unsetFlags);
 
-    QObject::connect(genFile, &Genfile::mainTxtOut, textBody, &TextBody::addMainTxt);
-    QObject::connect(genFile, &Genfile::errTxtOut, textBody, &TextBody::addErrTxt);
+    QObject::connect(genFile, &Genfile::txtInCache, textWorker, &TextWorker::dumpTxtCache);
+
+    QObject::connect(genThr, &QThread::finished, killer, &ThreadKiller::threadFinished);
+    QObject::connect(killer, &ThreadKiller::quitThreads, genThr, &QThread::quit);
+
+    genFile->moveToThread(genThr);
+    genThr->start();
 }
 
 void setupSession()
 {
-    Session  *session  = Shared::session;
-    CmdLine  *cmdLine  = Shared::cmdLine;
-    TextBody *textBody = Shared::textBody;
-    Genfile  *genFile  = Shared::genFile;
-    QThread  *sesThr   = new QThread(nullptr);
-
-    QObject::connect(session, &Session::destroyed, sesThr, &QThread::quit);
+    Session      *session    = Shared::session;
+    CmdLine      *cmdLine    = Shared::cmdLine;
+    TextWorker   *textWorker = Shared::textWorker;
+    Genfile      *genFile    = Shared::genFile;
+    ThreadKiller *killer     = Shared::theadKiller;
+    QThread      *sesThr     = new QThread(QCoreApplication::instance());
 
     QObject::connect(session, &Session::hostFinished, genFile, &Genfile::finished);
     QObject::connect(session, &Session::toGenFile, genFile, &Genfile::hookedDataIn);
@@ -231,12 +249,31 @@ void setupSession()
     QObject::connect(session, &Session::setUserIO, cmdLine, &CmdLine::setFlags);
     QObject::connect(session, &Session::unsetUserIO, cmdLine, &CmdLine::unsetFlags);
 
-    QObject::connect(session, &Session::bigTxtOut, textBody, &TextBody::addBigTxt);
-    QObject::connect(session, &Session::mainTxtOut, textBody, &TextBody::addMainTxt);
-    QObject::connect(session, &Session::errTxtOut, textBody, &TextBody::addErrTxt);
+    QObject::connect(session, &Session::txtInCache, textWorker, &TextWorker::dumpTxtCache);
 
-    QObject::connect(sesThr, &QThread::finished, sesThr, &QThread::deleteLater);
+    QObject::connect(sesThr, &QThread::finished, killer, &ThreadKiller::threadFinished);
+    QObject::connect(killer, &ThreadKiller::quitThreads, sesThr, &QThread::quit);
 
     session->moveToThread(sesThr);
     sesThr->start();
+}
+
+void setupText()
+{
+    TextWorker   *textWorker = Shared::textWorker;
+    CmdLine      *cmdLine    = Shared::cmdLine;
+    TextBody     *textBody   = Shared::textBody;
+    ThreadKiller *killer     = Shared::theadKiller;
+    QThread      *txtThr     = new QThread(QCoreApplication::instance());
+
+    QObject::connect(textWorker, &TextWorker::setUserIO, cmdLine, &CmdLine::setFlags);
+    QObject::connect(textWorker, &TextWorker::unsetUserIO, cmdLine, &CmdLine::unsetFlags);
+
+    QObject::connect(textWorker, &TextWorker::htmlOut, textBody, &TextBody::htmlIn);
+
+    QObject::connect(txtThr, &QThread::finished, killer, &ThreadKiller::threadFinished);
+    QObject::connect(killer, &ThreadKiller::quitThreads, txtThr, &QThread::quit);
+
+    textWorker->moveToThread(txtThr);
+    txtThr->start();
 }

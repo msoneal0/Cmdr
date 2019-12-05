@@ -54,6 +54,7 @@ private:
     void       askOverwrite();
     void       setupForWriting();
     void       setupForReading();
+    void       cacheTxt(quint8 typeId, QString txt);
     QByteArray autoFill(const QByteArray &data);
     qint64     getRdBuff();
 
@@ -69,9 +70,8 @@ public:
 
 signals:
 
+    void txtInCache();
     void enableGenFile(bool state);
-    void mainTxtOut(const QString &txt);
-    void errTxtOut(const QString &txt);
     void setUserIO(int flgs);
     void unsetUserIO(int flgs);
     void dataOut(quint16 cmdId, const QByteArray &data, uchar typeID = GEN_FILE);

@@ -16,14 +16,25 @@
 //    along with Cmdr under the LICENSE.md file. If not, see
 //    <http://www.gnu.org/licenses/>.
 
-Genfile::Genfile(QObject *parent) : QObject(parent)
+Genfile::Genfile(QObject *parent) : QObject(nullptr)
 {
     file = new QFile(this);
     hook = 0;
 
     finished();
 
+    connect(parent, &QObject::destroyed, this, &QObject::deleteLater);
     connect(this, &Genfile::rdFileLoop, this, &Genfile::hookedDataIn);
+}
+
+void Genfile::cacheTxt(quint8 typeId, QString txt)
+{
+    Shared::cacheTxt(Shared::TXT_IN, typeId, txt);
+
+    if (!(*Shared::activeDisp))
+    {
+        emit txtInCache();
+    }
 }
 
 void Genfile::finished()
@@ -42,6 +53,7 @@ void Genfile::finished()
         file->close();
     }
 
+    emit unsetUserIO(GEN_HOOK);
     emit enableGenFile(false);
 }
 
@@ -50,7 +62,7 @@ void Genfile::askOverwrite()
     flags |= CONFIRM_NEEDED;
 
     emit setUserIO(GEN_HOOK);
-    emit mainTxtOut("About to overwrite file: '" + localFile + "' do you want to continue? (y/n): ");
+    emit cacheTxt(TEXT, "About to overwrite file: '" + localFile + "' do you want to continue? (y/n): ");
 }
 
 bool Genfile::seekToOffset()
@@ -68,7 +80,7 @@ bool Genfile::seekToOffset()
 
         if (!ok)
         {
-            emit errTxtOut("err: Invalid offset was provided: " + offs + "\n");
+            cacheTxt(ERR, "err: Invalid offset was provided: " + offs + "\n");
         }
 
         ret = file->seek(pos);
@@ -88,7 +100,7 @@ bool Genfile::lenOk()
     }
     else if (len.isEmpty())
     {
-        emit errTxtOut("err: The -len parameter is empty.\n");
+        cacheTxt(ERR, "err: The -len parameter is empty.\n");
     }
     else
     {
@@ -113,20 +125,17 @@ void Genfile::setupForWriting()
 
     if (!file->open(mode))
     {
-        emit errTxtOut("err: Could not open the client file for writing. reason: " + file->errorString() + "\n");
-
+        cacheTxt(ERR, "err: Could not open the client file for writing. reason: " + file->errorString() + "\n");
         finished();
     }
     else if (!seekToOffset())
     {
-        emit errTxtOut("err: Could not seek to offset postion: " + offs + " of the client file.\n");
-
+        cacheTxt(ERR, "err: Could not seek to offset postion: " + offs + " of the client file.\n");
         finished();
     }
     else if (!lenOk())
     {
-        emit errTxtOut("err: The -len parameter (" + len + ") is invalid.\n");
-
+        cacheTxt(ERR, "err: The -len parameter (" + len + ") is invalid.\n");
         finished();
     }
     else
@@ -143,20 +152,17 @@ void Genfile::setupForReading()
 
     if (!file->open(QFile::ReadOnly))
     {
-        emit errTxtOut("err: Could not open the client file for reading. reason: " + file->errorString() + "\n");
-
+        cacheTxt(ERR, "err: Could not open the client file for reading. reason: " + file->errorString() + "\n");
         finished();
     }
     else if (!seekToOffset())
     {
-        emit errTxtOut("err: Could not seek to offset postion: " + offs + " of the client file.\n");
-
+        cacheTxt(ERR, "err: Could not seek to offset postion: " + offs + " of the client file.\n");
         finished();
     }
     else if (!lenOk())
     {
-        emit errTxtOut("err: The -len parameter (" + len + ") is invalid.\n");
-
+        cacheTxt(ERR, "err: The -len parameter (" + len + ") is invalid.\n");
         finished();
     }
 }
@@ -187,7 +193,7 @@ bool Genfile::wrToFile(const QByteArray &data)
     }
     else
     {
-        emit errTxtOut("err: Client write failure - " + file->errorString() + "\n");
+        cacheTxt(ERR, "err: Client write failure - " + file->errorString() + "\n");
     }
 
     return ret;
@@ -231,7 +237,7 @@ bool Genfile::rdFromFile()
     }
     else
     {
-        emit errTxtOut("err: Client read failure - " + file->errorString() + "\n");
+        cacheTxt(ERR, "err: Client read failure - " + file->errorString() + "\n");
     }
 
     return ret;
@@ -322,8 +328,7 @@ void Genfile::dataIn(quint16 cmdId, const QByteArray &data)
         }
         else
         {
-            emit errTxtOut("err: The host did not return -to_host or -from_host, making this command call ambiguous.\n");
-
+            cacheTxt(ERR, "err: The host did not return -to_host or -from_host, making this command call ambiguous.\n");
             finished();
         }
     }

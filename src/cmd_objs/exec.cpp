@@ -115,7 +115,7 @@ void Connect::dataIn(const QString &argsLine)
         }
         else
         {
-            emit errTxtOut("err: Could not open the requested bookmark for reading, reason: " + file.errorString() + "\n");
+            cacheTxt(ERR, "err: Could not open the requested bookmark for reading, reason: " + file.errorString() + "\n");
         }
 
         file.close();
@@ -123,15 +123,15 @@ void Connect::dataIn(const QString &argsLine)
 
     if (Shared::hostAddress->isEmpty())
     {
-        emit errTxtOut("err: Host address is empty.\n");
+        cacheTxt(ERR, "err: Host address is empty.\n");
     }
     else if (QHostAddress(*Shared::hostAddress).isNull())
     {
-        emit errTxtOut("err: '" + *Shared::hostAddress + "' is not a valid address.\n");
+        cacheTxt(ERR, "err: '" + *Shared::hostAddress + "' is not a valid address.\n");
     }
     else if (*Shared::hostPort == 0)
     {
-        emit errTxtOut("err: The host port cannot be 0.\n");
+        cacheTxt(ERR, "err: The host port cannot be 0.\n");
     }
     else
     {
@@ -159,6 +159,8 @@ void EndSession::dataIn(const QString &argsLine)
 void Term::dataIn(const QString &argsLine)
 {
     Q_UNUSED(argsLine)
+
+    Shared::cacheTxt(Shared::TXT_CLEAR);
 
     emit termHostCmd();
 }

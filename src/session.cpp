@@ -30,6 +30,7 @@ Session::Session(QObject *parent) : QSslSocket(nullptr)
     connect(this, &Session::connected, this, &Session::isConnected);
     connect(this, &Session::disconnected, this, &Session::isDisconnected);
     connect(this, &Session::readyRead, this, &Session::dataIn);
+    connect(this, &Session::loopDataIn, this, &Session::dataIn);
 
     connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(sockerr(QAbstractSocket::SocketError)));
 }
@@ -42,7 +43,7 @@ void Session::hookedBinToServer(const QByteArray &data, quint8 typeId)
     }
     else
     {
-        emit errTxtOut("err: not connected to a host.\n");
+        cacheTxt(ERR, "err: not connected to a host.\n");
     }
 }
 
@@ -58,7 +59,7 @@ void Session::binToServer(quint16 cmdId, const QByteArray &data, quint8 typeId)
     }
     else
     {
-        emit errTxtOut("err: not connected to a host.\n");
+        cacheTxt(ERR, "err: not connected to a host.\n");
     }
 }
 
@@ -66,11 +67,11 @@ void Session::sockerr(QAbstractSocket::SocketError err)
 {
     if (err == QAbstractSocket::RemoteHostClosedError)
     {
-        emit mainTxtOut("\nThe remote host closed the session.\n");
+        cacheTxt(TEXT, "\nThe remote host closed the session.\n");
     }
     else
     {
-        emit errTxtOut("\nerr: " + errorString() + "\n");
+        cacheTxt(ERR, "\nerr: " + errorString() + "\n");
 
         if (state() == QAbstractSocket::UnconnectedState)
         {
@@ -87,7 +88,7 @@ void Session::isConnected()
     // appName = UTF16LE string (padded with 0x00)
     // coName  = UTF16LE string (padded with 0x00)
 
-    emit mainTxtOut("Connected.\n");
+    cacheTxt(TEXT, "Connected.\n");
 
     QByteArray header;
     QString    appName = QString(APP_NAME) + " v" + QString(APP_VERSION);
@@ -102,8 +103,7 @@ void Session::isConnected()
     }
     else
     {
-        emit errTxtOut("\nerr: client bug! - header len not equal to " + QString::number(CLIENT_HEADER_LEN) + "\n");
-
+        cacheTxt(ERR, "\nerr: client bug! - header len not equal to " + QString::number(CLIENT_HEADER_LEN) + "\n");
         disconnectFromHost();
     }
 }
@@ -123,7 +123,7 @@ void Session::handShakeDone()
            << " #key_exchange   - " << cipher.keyExchangeMethod()    << endl
            << " #authentication - " << cipher.authenticationMethod() << endl;
 
-    emit mainTxtOut(txt);
+    cacheTxt(TEXT, txt);
 }
 
 void Session::isDisconnected()
@@ -142,7 +142,7 @@ void Session::isDisconnected()
     Shared::hostCmds->clear();
     Shared::genfileCmds->clear();
 
-    emit mainTxtOut("\nHost session ended. (disconnected)\n\n");
+    cacheTxt(TEXT, "\nHost session ended. (disconnected)\n\n");
 
     if (reconnect)
     {
@@ -162,8 +162,7 @@ void Session::connectToServ()
     }
     else
     {
-        emit mainTxtOut("Connecting to address: " + *Shared::hostAddress + " port: " + QString::number(*Shared::hostPort) + "\n");
-
+        cacheTxt(TEXT, "Connecting to address: " + *Shared::hostAddress + " port: " + QString::number(*Shared::hostPort) + "\n");
         connectToHost(*Shared::hostAddress, *Shared::hostPort);
     }
 }
@@ -174,8 +173,7 @@ void Session::disconnectFromServ()
 
     if (state() == QAbstractSocket::ConnectedState)
     {
-        emit mainTxtOut("Disconnecting.\n");
-
+        cacheTxt(TEXT, "Disconnecting.\n");
         disconnectFromHost();
     }
 
@@ -225,22 +223,14 @@ bool Session::isAsync(quint16 id)
 
 void Session::procAsync(const QByteArray &data)
 {
-    if (dType == TEXT)
+    if ((dType == TEXT) || (dType == BIG_TEXT) || (dType == ERR))
     {
+        cacheTxt(dType, fromTEXT(data));
+
         if (cmdId == ASYNC_RDY)
         {
             hook = 0;
         }
-
-        emit mainTxtOut(fromTEXT(data));
-    }
-    else if (dType == BIG_TEXT)
-    {
-        emit bigTxtOut(fromTEXT(data));
-    }
-    else if (dType == ERR)
-    {
-        emit errTxtOut(fromTEXT(data));
     }
     else if (cmdId == ASYNC_SYS_MSG)
     {
@@ -249,11 +239,11 @@ void Session::procAsync(const QByteArray &data)
             QSslCertificate cert(data, QSsl::Pem);
             QSslError       selfSigned(QSslError::SelfSignedCertificate, cert);
 
-            emit mainTxtOut("SSL cert received.\n\n");
+            cacheTxt(TEXT, "SSL cert received.\n\n");
 
             if (cert.isSelfSigned())
             {
-                emit mainTxtOut("WARNING: the cert is self signed. be careful if in a public network.\n\n");
+                cacheTxt(TEXT, "WARNING: the host cert is self signed.\n\n");
             }
 
             ignoreSslErrors(QList<QSslError>() << selfSigned);
@@ -291,6 +281,16 @@ void Session::procAsync(const QByteArray &data)
     }
 }
 
+void Session::cacheTxt(quint8 typeId, QString txt)
+{
+    Shared::cacheTxt(Shared::TXT_IN, typeId, txt);
+
+    if (!(*Shared::activeDisp))
+    {
+        emit txtInCache();
+    }
+}
+
 void Session::dataFromHost(const QByteArray &data)
 {
     if (isAsync(cmdId))
@@ -299,22 +299,9 @@ void Session::dataFromHost(const QByteArray &data)
     }
     else if ((cmdId == hook) && (branId == 0) && (hook != 0))
     {
-        if ((dType == TEXT) || (dType == PRIV_TEXT))
+        if ((dType == TEXT) || (dType == PRIV_TEXT) || (dType == BIG_TEXT) || (dType == ERR))
         {
-            emit mainTxtOut(fromTEXT(data));
-
-            if (dType == PRIV_TEXT)
-            {
-                emit setUserIO(HIDDEN);
-            }
-        }
-        else if (dType == BIG_TEXT)
-        {
-            emit bigTxtOut(fromTEXT(data));
-        }
-        else if (dType == ERR)
-        {
-            emit errTxtOut(fromTEXT(data));
+            cacheTxt(dType, fromTEXT(data));
         }
         else if (dType == IDLE)
         {
@@ -325,11 +312,11 @@ void Session::dataFromHost(const QByteArray &data)
 
             if (Shared::hostCmds->contains(cmdId))
             {
-                emit mainTxtOut("\nFinished: " + Shared::hostCmds->value(cmdId) + "\n\n");
+                cacheTxt(TEXT, "\nFinished: " + Shared::hostCmds->value(cmdId) + "\n\n");
             }
             else
             {
-                emit mainTxtOut("\nFinished: Unknown\n\n");
+                cacheTxt(TEXT, "\nFinished: Unknown\n\n");
             }
         }
         else if ((dType == GEN_FILE) && (flags & GEN_FILE_ON))
@@ -348,7 +335,8 @@ void Session::dataIn()
             flags ^= DSIZE_RDY;
 
             dataFromHost(read(dSize));
-            dataIn();
+
+            emit loopDataIn();
         }
     }
     else if (flags & VER_OK)
@@ -363,7 +351,7 @@ void Session::dataIn()
             dSize  = static_cast<quint32>(rdInt(header.mid(5, 3)));
             flags |= DSIZE_RDY;
 
-            dataIn();
+            emit loopDataIn();
         }
     }
     else if (bytesAvailable() >= SERVER_HEADER_LEN)
@@ -386,7 +374,7 @@ void Session::dataIn()
             *Shared::servMinor = static_cast<quint16>(rdInt(read(2)));
             *Shared::servPatch = static_cast<quint16>(rdInt(read(2)));
 
-            emit mainTxtOut("Detected host version: " + verText(*Shared::servMajor, *Shared::servMinor, *Shared::servPatch) + "\n");
+            cacheTxt(TEXT, "Detected host version: " + verText(*Shared::servMajor, *Shared::servMinor, *Shared::servPatch) + "\n");
 
             if (*Shared::servMajor == 2)
             {
@@ -395,35 +383,34 @@ void Session::dataIn()
 
                 flags |= VER_OK;
 
-                emit mainTxtOut("Host assigned session id: " + Shared::sessionId->toHex() + "\n");
+                cacheTxt(TEXT, "Host assigned session id: " + Shared::sessionId->toHex() + "\n");
 
                 if (reply == 2)
                 {
-                    emit mainTxtOut("Awaiting SSL cert from the host.\n");
+                    cacheTxt(TEXT, "Awaiting SSL cert from the host.\n");
                 }
                 else
                 {
-                    emit mainTxtOut("The host claims SSL is not needed. the connection will not be encrypted.\n");
+                    cacheTxt(TEXT, "The host claims SSL is not needed. the connection will not be encrypted.\n");
                 }
             }
             else
             {
-                emit errTxtOut("err: Host not compatible.\n");
-
+                cacheTxt(ERR, "err: Host not compatible.\n");
                 disconnectFromHost();
             }
         }
         else if (reply == 4)
         {
-            emit errTxtOut("err: The host was unable to find a SSL cert for common name: " + *Shared::hostAddress + ".\n");
+            cacheTxt(ERR, "err: The host was unable to find a SSL cert for common name: " + *Shared::hostAddress + ".\n");
         }
         else
         {
-            emit errTxtOut("err: Invalid reply id from the host: " + QString::number(reply) + ".\n");
+            cacheTxt(ERR, "err: Invalid reply id from the host: " + QString::number(reply) + ".\n");
         }
 
         if ((reply != 1) && (reply != 2)) disconnectFromHost();
 
-        dataIn();
+        emit loopDataIn();
     }
 }

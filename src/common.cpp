@@ -383,6 +383,7 @@ bool argExists(const QString &key, const QStringList &args)
 }
 
 bool                     *Shared::connectedToHost = nullptr;
+bool                     *Shared::activeDisp      = nullptr;
 QJsonObject              *Shared::localData       = nullptr;
 QHash<QString, Command*> *Shared::clientCmds      = nullptr;
 QHash<quint16, QString>  *Shared::hostCmds        = nullptr;
@@ -403,5 +404,75 @@ Genfile                  *Shared::genFile         = nullptr;
 MainWindow               *Shared::mainWin         = nullptr;
 Session                  *Shared::session         = nullptr;
 TextBody                 *Shared::textBody        = nullptr;
+TextWorker               *Shared::textWorker      = nullptr;
 ContextReloader          *Shared::contextReloader = nullptr;
 QWidget                  *Shared::mainWidget      = nullptr;
+QList<quint8>            *Shared::idCache         = nullptr;
+QList<QString>           *Shared::txtCache        = nullptr;
+ThreadKiller             *Shared::theadKiller     = nullptr;
+
+bool Shared::cacheTxt(CacheOp op, quint8 &typeId, QString &txt)
+{
+    QMutex mutex;
+    bool   ret = false;
+
+    mutex.lock();
+
+    if (op == TXT_IN)
+    {
+        if ((typeId == TEXT) || (typeId == ERR) || (typeId == BIG_TEXT) || (typeId == PRIV_TEXT))
+        {
+            idCache->append(typeId);
+            txtCache->append(txt);
+
+            ret = true;
+        }
+    }
+    else if (op == TXT_OUT)
+    {
+        if (!idCache->isEmpty() && !txtCache->isEmpty())
+        {
+            typeId = idCache->takeFirst();
+            txt    = txtCache->takeFirst();
+            ret    = true;
+        }
+    }
+    else if (op == TXT_CLEAR)
+    {
+        *Shared::activeDisp = false;
+
+        idCache->clear();
+        txtCache->clear();
+    }
+    else if (op == TXT_IS_EMPTY)
+    {
+        ret = idCache->isEmpty() && txtCache->isEmpty();
+    }
+
+    mutex.unlock();
+
+    return ret;
+}
+
+bool Shared::cacheTxt(CacheOp op)
+{
+    quint8  unusedId = 0;
+    QString unusedTxt;
+
+    return cacheTxt(op, unusedId, unusedTxt);
+}
+
+ThreadKiller::ThreadKiller(QObject *parent) : QObject(parent)
+{
+    threadCount = 3;
+}
+
+void ThreadKiller::threadFinished()
+{
+    threadCount--;
+
+    if (threadCount == 0)
+    {
+        QCoreApplication::instance()->quit();
+    }
+}
