@@ -388,6 +388,7 @@ QJsonObject              *Shared::localData       = nullptr;
 QHash<QString, Command*> *Shared::clientCmds      = nullptr;
 QHash<quint16, QString>  *Shared::hostCmds        = nullptr;
 QHash<quint16, QString>  *Shared::genfileCmds     = nullptr;
+QHash<quint16, quint8>   *Shared::genfileTypes    = nullptr;
 QHash<QString, Command*> *Shared::hostDocs        = nullptr;
 QStringList              *Shared::hookBypass      = nullptr;
 QByteArray               *Shared::sessionId       = nullptr;

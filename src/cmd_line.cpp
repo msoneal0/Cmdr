@@ -176,7 +176,9 @@ void CmdLine::toHost(const QString &cmdName, const QString &args)
         }
         else if (Shared::genfileCmds->contains(cmdId))
         {
-            emit dataToGenFile(cmdId, toTEXT(args));
+            emit setHostCmdId(cmdId);
+            emit setGenfileType(Shared::genfileTypes->value(cmdId));
+            emit dataToGenFile(toTEXT(args));
         }
         else
         {
@@ -223,7 +225,7 @@ void CmdLine::procCmdLine(const QString &line)
 
     if (flags & GEN_HOOK)
     {
-        emit dataToHookedGenFile(toTEXT(argsLine));
+        emit dataToGenFile(toTEXT(argsLine));
     }
     else if (Shared::clientCmds->contains(cmdName))
     {

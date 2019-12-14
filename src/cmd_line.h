@@ -63,8 +63,9 @@ signals:
     void dataToHookedCmdObj(const QString &argsLine);
     void dataToHost(quint16 cmdId, const QByteArray &data, uchar dType);
     void dataToHookedHost(const QByteArray &data, uchar dType);
-    void dataToGenFile(quint16 cmdId, const QByteArray &data);
-    void dataToHookedGenFile(const QByteArray &data);
+    void dataToGenFile(const QByteArray &data);
+    void setHostCmdId(quint16 cmdId);
+    void setGenfileType(quint8 typeId);
     void txtInCache();
 };
 

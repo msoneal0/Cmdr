@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
     QString                  hostAddress;
     QStringList              hookBypass;
     QHash<quint16, QString>  genfileCmds;
+    QHash<quint16, quint8>   genfileTypes;
     QHash<QString, Command*> clientCmds;
     QHash<QString, Command*> hostDocs;
     QHash<quint16, QString>  hostCmds;
@@ -70,6 +71,7 @@ int main(int argc, char *argv[])
 
     Shared::connectedToHost = &connected;
     Shared::genfileCmds     = &genfileCmds;
+    Shared::genfileTypes    = &genfileTypes;
     Shared::clientCmds      = &clientCmds;
     Shared::hostCmds        = &hostCmds;
     Shared::hostDocs        = &hostDocs;
@@ -123,6 +125,8 @@ int main(int argc, char *argv[])
     Shared::mainWin->setTextBody(Shared::textBody);
     Shared::mainWin->setCmdLine(Shared::cmdLine);
     Shared::mainWin->showUi();
+
+    QDir::setCurrent(QDir::homePath());
 
     return app.exec();
 }
@@ -202,9 +206,10 @@ void setupCmdLine()
 
     QObject::connect(cmdLine, &CmdLine::dataToHost, session, &Session::binToServer);
     QObject::connect(cmdLine, &CmdLine::dataToHookedHost, session, &Session::hookedBinToServer);
+    QObject::connect(cmdLine, &CmdLine::setHostCmdId, session, &Session::setCmdHook);
 
     QObject::connect(cmdLine, &CmdLine::dataToGenFile, genFile, &Genfile::dataIn);
-    QObject::connect(cmdLine, &CmdLine::dataToHookedGenFile, genFile, &Genfile::hookedDataIn);
+    QObject::connect(cmdLine, &CmdLine::setGenfileType, genFile, &Genfile::setGenfileType);
 
     QObject::connect(cmdLine, &CmdLine::txtInCache, textWorker, &TextWorker::dumpTxtCache);
 }
@@ -218,9 +223,10 @@ void setupGenFile()
     ThreadKiller *killer     = Shared::theadKiller;
     QThread      *genThr     = new QThread(QCoreApplication::instance());
 
-    QObject::connect(genFile, &Genfile::dataOut, session, &Session::binToServer);
-    QObject::connect(genFile, &Genfile::hookedDataOut, session, &Session::hookedBinToServer);
+    QObject::connect(genFile, &Genfile::termHostCmd, session, &Session::termHostCmd);
+    QObject::connect(genFile, &Genfile::dataOut, session, &Session::hookedBinToServer);
     QObject::connect(genFile, &Genfile::enableGenFile, session, &Session::enableGenFile);
+    QObject::connect(genFile, &Genfile::preCallTerm, session, &Session::idle);
 
     QObject::connect(genFile, &Genfile::setUserIO, cmdLine, &CmdLine::setFlags);
     QObject::connect(genFile, &Genfile::unsetUserIO, cmdLine, &CmdLine::unsetFlags);
@@ -244,7 +250,7 @@ void setupSession()
     QThread      *sesThr     = new QThread(QCoreApplication::instance());
 
     QObject::connect(session, &Session::hostFinished, genFile, &Genfile::finished);
-    QObject::connect(session, &Session::toGenFile, genFile, &Genfile::hookedDataIn);
+    QObject::connect(session, &Session::toGenFile, genFile, &Genfile::dataIn);
 
     QObject::connect(session, &Session::setUserIO, cmdLine, &CmdLine::setFlags);
     QObject::connect(session, &Session::unsetUserIO, cmdLine, &CmdLine::unsetFlags);

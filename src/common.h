@@ -68,13 +68,13 @@
 
 #define DEFAULT_HIST_LIMIT 100
 #define DEFAULT_MAX_LINES  1000
-#define RDBUFF             128000
+#define RDBUFF             16777215
 #define TXT_CODEC          "UTF-16LE"
 #define BOOKMARK_FOLDER    "bookmarks"
 #define CONFIG_FILENAME    "config.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "2.1.0"
+#define APP_VERSION        "2.2.0"
 
 enum TypeID : quint8
 {
@@ -107,6 +107,12 @@ enum TypeID : quint8
     KILL_CMD              = 27,
     HALT_CMD              = 28,
     RESUME_CMD            = 29
+};
+
+enum GenFileType : quint8
+{
+    GEN_UPLOAD   = 2,
+    GEN_DOWNLOAD = 3
 };
 
 enum AsyncCommands : quint16
@@ -203,6 +209,7 @@ public:
     static QHash<QString, Command*> *clientCmds;
     static QHash<quint16, QString>  *hostCmds;
     static QHash<quint16, QString>  *genfileCmds;
+    static QHash<quint16, quint8>   *genfileTypes;
     static QHash<QString, Command*> *hostDocs;
     static QList<quint8>            *idCache;
     static QList<QString>           *txtCache;

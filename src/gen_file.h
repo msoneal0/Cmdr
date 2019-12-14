@@ -25,7 +25,7 @@ class Genfile : public QObject
 
 private:
 
-    enum GenfileFlags
+    enum GenfileFlags : uint
     {
         CLIENT_PARAMS_RDY = 1,
         HOST_PARAMS_RDY   = 1 << 1,
@@ -34,7 +34,8 @@ private:
         DO_NOT_ASK        = 1 << 4,
         CONFIRM_NEEDED    = 1 << 5,
         WRITE_MODE        = 1 << 6,
-        READ_MODE         = 1 << 7
+        READ_MODE         = 1 << 7,
+        ACTIVE            = 1 << 8
     };
 
     uint    flags;
@@ -61,8 +62,8 @@ private:
 public slots:
 
     void finished();
-    void hookedDataIn(const QByteArray &data);
-    void dataIn(quint16 cmdId, const QByteArray &data);
+    void setGenfileType(quint8 typeId);
+    void dataIn(const QByteArray &data);
 
 public:
 
@@ -71,11 +72,12 @@ public:
 signals:
 
     void txtInCache();
+    void termHostCmd();
+    void preCallTerm();
     void enableGenFile(bool state);
     void setUserIO(int flgs);
     void unsetUserIO(int flgs);
-    void dataOut(quint16 cmdId, const QByteArray &data, uchar typeID = GEN_FILE);
-    void hookedDataOut(const QByteArray &data, uchar typeID = GEN_FILE);
+    void dataOut(const QByteArray &data, quint8 typeID = GEN_FILE);
     void rdFileLoop(QByteArray data = QByteArray());
 };
 

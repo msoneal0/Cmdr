@@ -34,9 +34,10 @@ HostDoc::HostDoc(const QByteArray &import, QObject *parent) : Command(parent)
 
         setObjectName(cmdName + num);
 
-        if (import[2] == 0x01)
+        if ((import[2] == GEN_UPLOAD) || (import[2] == GEN_DOWNLOAD))
         {
             Shared::genfileCmds->insert(cmdId, objectName());
+            Shared::genfileTypes->insert(cmdId, static_cast<quint8>(import[2]));
         }
 
         quint32 offs = 259;
@@ -112,6 +113,7 @@ void HostDoc::cmdRemoved(quint16 id)
         Shared::hostCmds->remove(cmdId);
         Shared::hostDocs->remove(objectName());
         Shared::genfileCmds->remove(cmdId);
+        Shared::genfileTypes->remove(cmdId);
 
         deleteLater();
     }

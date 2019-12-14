@@ -63,6 +63,11 @@ void Session::binToServer(quint16 cmdId, const QByteArray &data, quint8 typeId)
     }
 }
 
+void Session::setCmdHook(quint16 cmdId)
+{
+    hook = cmdId;
+}
+
 void Session::sockerr(QAbstractSocket::SocketError err)
 {
     if (err == QAbstractSocket::RemoteHostClosedError)
@@ -141,6 +146,7 @@ void Session::isDisconnected()
     Shared::sessionId->clear();
     Shared::hostCmds->clear();
     Shared::genfileCmds->clear();
+    Shared::genfileTypes->clear();
 
     cacheTxt(TEXT, "\nHost session ended. (disconnected)\n\n");
 
@@ -291,6 +297,23 @@ void Session::cacheTxt(quint8 typeId, QString txt)
     }
 }
 
+void Session::idle()
+{
+    emit hostFinished();
+    emit unsetUserIO(HOST_HOOK);
+
+    if (Shared::hostCmds->contains(hook))
+    {
+        cacheTxt(TEXT, "\nFinished: " + Shared::hostCmds->value(hook) + "\n\n");
+    }
+    else
+    {
+        cacheTxt(TEXT, "\nFinished: Unknown\n\n");
+    }
+
+    hook = 0;
+}
+
 void Session::dataFromHost(const QByteArray &data)
 {
     if (isAsync(cmdId))
@@ -305,19 +328,7 @@ void Session::dataFromHost(const QByteArray &data)
         }
         else if (dType == IDLE)
         {
-            hook = 0;
-
-            emit hostFinished();
-            emit unsetUserIO(HOST_HOOK);
-
-            if (Shared::hostCmds->contains(cmdId))
-            {
-                cacheTxt(TEXT, "\nFinished: " + Shared::hostCmds->value(cmdId) + "\n\n");
-            }
-            else
-            {
-                cacheTxt(TEXT, "\nFinished: Unknown\n\n");
-            }
+            idle();
         }
         else if ((dType == GEN_FILE) && (flags & GEN_FILE_ON))
         {

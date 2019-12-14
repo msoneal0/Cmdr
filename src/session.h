@@ -87,6 +87,8 @@ public slots:
     void hookedBinToServer(const QByteArray &data, quint8 typeId);
     void binToServer(quint16 cmdId, const QByteArray &data, quint8 typeId);
     void enableGenFile(bool state);
+    void setCmdHook(quint16 cmdId);
+    void idle();
     void termHostCmd();
     void haltHostCmd();
     void resumeHostCmd();

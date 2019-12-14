@@ -106,7 +106,7 @@ makeself
 Linux_build.sh is a custom script designed to build this project from the source code using qmake, make and makeself. You can pass 2 optional arguments:
 
 1. The path to the QT bin folder in case you want to compile with a QT install not defined in PATH.
-2. Path of the output makeself file (usually has a .run extension). If not given, the outfile will be named cmdr-1.0.0.run in the source code folder.
+2. Path of the output makeself file (usually has a .run extension). If not given, the outfile will be named cmdr-x.x.x.run in the source code folder.
 
 Build:
 ```
@@ -115,6 +115,6 @@ sh ./linux_build.sh
 ```
 Install:
 ```
-chmod +x ./cmdr-1.0.0.run
-./cmdr-1.0.0.run
+chmod +x ./cmdr-x.x.x.run
+./cmdr-x.x.x.run
 ```

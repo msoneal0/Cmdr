@@ -19,12 +19,11 @@
 Genfile::Genfile(QObject *parent) : QObject(nullptr)
 {
     file = new QFile(this);
-    hook = 0;
 
     finished();
 
     connect(parent, &QObject::destroyed, this, &QObject::deleteLater);
-    connect(this, &Genfile::rdFileLoop, this, &Genfile::hookedDataIn);
+    connect(this, &Genfile::rdFileLoop, this, &Genfile::dataIn);
 }
 
 void Genfile::cacheTxt(quint8 typeId, QString txt)
@@ -39,22 +38,25 @@ void Genfile::cacheTxt(quint8 typeId, QString txt)
 
 void Genfile::finished()
 {
-    flags   = 0;
-    bytesRW = 0;
-    hook    = 0;
-
-    localFile.clear();
-    remoteFile.clear();
-    len.clear();
-    offs.clear();
-
-    if (file->isOpen())
+    if (flags & ACTIVE)
     {
-        file->close();
-    }
+        flags   = 0;
+        bytesRW = 0;
 
-    emit unsetUserIO(GEN_HOOK);
-    emit enableGenFile(false);
+        localFile.clear();
+        remoteFile.clear();
+        len.clear();
+        offs.clear();
+
+        if (file->isOpen())
+        {
+            file->close();
+        }
+
+        emit unsetUserIO(GEN_HOOK);
+        emit enableGenFile(false);
+        emit termHostCmd();
+    }
 }
 
 void Genfile::askOverwrite()
@@ -80,7 +82,7 @@ bool Genfile::seekToOffset()
 
         if (!ok)
         {
-            cacheTxt(ERR, "err: Invalid offset was provided: " + offs + "\n");
+            cacheTxt(ERR, "err: An invalid offset was provided: " + offs + "\n");
         }
 
         ret = file->seek(pos);
@@ -140,7 +142,7 @@ void Genfile::setupForWriting()
     }
     else
     {
-        emit hookedDataOut(QByteArray());
+        emit dataOut(QByteArray());
     }
 }
 
@@ -188,7 +190,7 @@ bool Genfile::wrToFile(const QByteArray &data)
         }
         else if (flags & SINGLE_STEP_MODE)
         {
-            emit hookedDataOut(QByteArray());
+            emit dataOut(QByteArray());
         }
     }
     else
@@ -224,7 +226,7 @@ bool Genfile::rdFromFile()
         ret      = true;
         bytesRW += data.size();
 
-        emit hookedDataOut(data);
+        emit dataOut(data);
 
         if (atEnd())
         {
@@ -243,41 +245,44 @@ bool Genfile::rdFromFile()
     return ret;
 }
 
+void Genfile::setGenfileType(quint8 typeId)
+{
+    if (typeId == GEN_UPLOAD)
+    {
+        flags |= READ_MODE;
+    }
+    else if (typeId == GEN_DOWNLOAD)
+    {
+        flags |= WRITE_MODE;
+    }
+}
+
 QByteArray Genfile::autoFill(const QByteArray &data)
 {
-    len = QString::number(QFileInfo(localFile).size());
-
     QStringList args = parseArgs(data, -1);
     int         ind  = args.indexOf(QRegExp("-len", Qt::CaseInsensitive));
 
-    if (ind != -1)
+    if (ind == -1)
     {
-        args.removeAt(ind);
+        len = QString::number(QFileInfo(localFile).size());
 
-        if ((ind + 1) < args.size())
-        {
-           args.removeAt(ind + 1);
-        }
+        args.append("-len");
+        args.append(len);
+
+        return toTEXT(args.join(' '));
     }
-
-    args.append("-len");
-    args.append(len);
-
-    return toTEXT(args.join(' '));
+    else
+    {
+        return data;
+    }
 }
 
-void Genfile::hookedDataIn(const QByteArray &data)
-{
-    dataIn(hook, data);
-}
-
-void Genfile::dataIn(quint16 cmdId, const QByteArray &data)
+void Genfile::dataIn(const QByteArray &data)
 {
     if (!(flags & CLIENT_PARAMS_RDY))
     {
         QStringList args = parseArgs(data, -1);
 
-        hook       = cmdId;
         localFile  = getParam("-client_file", args);
         remoteFile = getParam("-remote_file", args);
         len        = getParam("-len", args);
@@ -289,9 +294,37 @@ void Genfile::dataIn(quint16 cmdId, const QByteArray &data)
         }
 
         flags |= CLIENT_PARAMS_RDY;
+        flags |= ACTIVE;
 
         emit enableGenFile(true);
-        emit dataOut(cmdId, autoFill(data));
+
+        if (flags & READ_MODE)
+        {
+            if (!argExists("-client_file", args))
+            {
+                cacheTxt(ERR, "err: The client file (-client_file) argument was not found.\n");
+                finished();
+
+                emit preCallTerm();
+            }
+            else if (!QFile::exists(localFile))
+            {
+                cacheTxt(ERR, "err: The client file: '" + localFile + "' does not exists.\n");
+                finished();
+
+                emit preCallTerm();
+            }
+            else
+            {
+                emit setUserIO(HOST_HOOK);
+                emit dataOut(autoFill(data));
+            }
+        }
+        else
+        {
+            emit setUserIO(HOST_HOOK);
+            emit dataOut(data);
+        }
     }
     else if (!(flags & HOST_PARAMS_RDY))
     {
@@ -302,19 +335,24 @@ void Genfile::dataIn(quint16 cmdId, const QByteArray &data)
             flags |= SINGLE_STEP_MODE;
         }
 
-        if (args.contains("-truncate", Qt::CaseInsensitive))
-        {
-            flags |= TRUNCATE;
-        }
-
-        if (args.contains("-to_host", Qt::CaseInsensitive))
+        if (flags & READ_MODE)
         {
             setupForReading();
 
             flags |= HOST_PARAMS_RDY;
         }
-        else if (args.contains("-from_host", Qt::CaseInsensitive))
+        else if (flags & WRITE_MODE)
         {
+            if (args.contains("-truncate", Qt::CaseInsensitive))
+            {
+                flags |= TRUNCATE;
+            }
+
+            if (args.contains("-len", Qt::CaseInsensitive))
+            {
+                len = getParam("-len", args);
+            }
+
             if (QFile::exists(localFile) && !(flags & DO_NOT_ASK))
             {
                 askOverwrite();
@@ -328,7 +366,7 @@ void Genfile::dataIn(quint16 cmdId, const QByteArray &data)
         }
         else
         {
-            cacheTxt(ERR, "err: The host did not return -to_host or -from_host, making this command call ambiguous.\n");
+            cacheTxt(ERR, "err: The client doesn't know if this command call is an upload or download. this is a bug, please report it.\n");
             finished();
         }
     }
@@ -340,7 +378,7 @@ void Genfile::dataIn(quint16 cmdId, const QByteArray &data)
         {
             emit unsetUserIO(GEN_HOOK);
 
-            flags ^= CONFIRM_NEEDED;
+            flags &= ~CONFIRM_NEEDED;
 
             setupForWriting();
         }

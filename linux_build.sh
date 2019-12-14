@@ -5,7 +5,7 @@ installer_file="$2"
 
 src_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 bin_name="cmdr"
-app_version="1.0.0"
+app_version="2.2.0"
 app_name="Cmdr"
 install_dir="/opt/$bin_name"
 bin_dir="/usr/bin"
@@ -55,6 +55,9 @@ if [ $? -eq 0 -a -d "$qt_dir" ]; then
     ldd ./$bin_name | grep "libicu" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     ldd ./$bin_name | grep "libssl" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     ldd ./$bin_name | grep "libcrypto" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
+    ldd ./$bin_name | grep "libGL.so" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
+    ldd ./$bin_name | grep "libpcre16.so" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
+    ldd ./$bin_name | grep "libpcre.so" | awk '{print $3}' | xargs -I '{}' cp -v '{}' ./build/lib
     mv -v ./$bin_name ./build/$bin_name
     cp -v $qt_dir/../plugins/platforms/libqxcb.so ./build/platforms/libqxcb.so
     cp -rfv ./icons ./build
@@ -64,15 +67,11 @@ if [ $? -eq 0 -a -d "$qt_dir" ]; then
     
      cp -fv $qt_dir/../../libQt5DBus.so.5 ./build/lib/libQt5DBus.so.5
      cp -fv $qt_dir/../../libQt5XcbQpa.so.5 ./build/lib/libQt5XcbQpa.so.5
-     cp -fv $qt_dir/../../libGL.so ./build/lib/libGL.so
-     cp -fv $qt_dir/../../libpcre16.so.3 ./build/lib/libpcre16.so.3
      
     else
     
      cp -fv $qt_dir/../lib/libQt5DBus.so.5 ./build/lib/libQt5DBus.so.5
      cp -fv $qt_dir/../lib/libQt5XcbQpa.so.5 ./build/lib/libQt5XcbQpa.so.5
-     cp -fv $qt_dir/../lib/libGL.so ./build/lib/libGL.so
-     cp -fv $qt_dir/../lib/libpcre16.so.3 ./build/lib/libpcre16.so.3
     
     fi
     
@@ -207,6 +206,10 @@ if [ $? -eq 0 -a -d "$qt_dir" ]; then
    fi
    
  fi
+ 
+else
+
+ echo "err: A valid Qt dir could not be found."
  
 fi
 
