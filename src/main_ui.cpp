@@ -85,13 +85,26 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::setCmdLine(QWidget *widget)
 {
     widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    mainLayout->insertWidget(1, widget);
+    mainLayout->insertWidget(2, widget);
 }
 
 void MainWindow::setTextBody(QWidget *widget)
 {
+    Shared::prog = new QProgressBar(this);
+
+    Shared::prog->setVisible(false);
+    Shared::prog->setFixedHeight(5);
+    Shared::prog->setTextVisible(false);
+    Shared::prog->setMaximum(100);
+    Shared::prog->setMinimum(0);
+    Shared::prog->setValue(0);
+    Shared::prog->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    loadTheme(localData, Shared::prog, true);
+
     widget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mainLayout->insertWidget(0, widget);
+    mainLayout->insertWidget(1, Shared::prog);
 }
 
 void MainWindow::showUi()

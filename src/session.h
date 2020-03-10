@@ -34,6 +34,7 @@
 #include <QSslCipher>
 #include <QSslCertificate>
 #include <QSocketNotifier>
+#include <QTimer>
 
 #include "cmd_objs/command.h"
 #include "cmd_objs/bookmarks.h"
@@ -50,17 +51,20 @@ class Session : public QSslSocket
 
 private:
 
+    QTimer *progResetDelay;
     quint32 flags;
     quint32 dSize;
     quint16 cmdId;
     quint16 branId;
     quint16 hook;
     quint8  dType;
+    bool    activeProg;
     bool    reconnect;
 
     void cacheTxt(quint8 typeId, QString txt);
     void dataFromHost(const QByteArray &data);
     void procAsync(const QByteArray &data);
+    void updateProg(int value);
     bool isAsync(quint16 id);
 
 private slots:
@@ -69,6 +73,8 @@ private slots:
     void isConnected();
     void isDisconnected();
     void handShakeDone();
+    void resetProg();
+    void startProg();
     void sockerr(QAbstractSocket::SocketError err);
 
 public:
@@ -90,7 +96,7 @@ public slots:
     void setCmdHook(quint16 cmdId);
     void idle();
     void termHostCmd();
-    void haltHostCmd();
+    void yieldHostCmd();
     void resumeHostCmd();
     void connectToServ();
     void disconnectFromServ();
@@ -100,6 +106,8 @@ signals:
     void hostFinished();
     void txtInCache();
     void loopDataIn();
+    void showProg(bool);
+    void setProg(int);
     void setUserIO(int flgs);
     void unsetUserIO(int flgs);
     void hostCmdRemoved(quint16 id);

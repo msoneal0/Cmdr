@@ -44,10 +44,10 @@ void Status::dataIn(const QString &argsLine)
     {
         txtOut << "" << endl;
         txtOut << "--Session data" << endl << endl;
-        txtOut << "  Client address    : " << Shared::socket->localAddress().toString()                           << endl;
-        txtOut << "  Host address      : " << Shared::socket->peerAddress().toString()                            << endl;
-        txtOut << "  Session id        : " << Shared::sessionId->toHex()                                          << endl;
-        txtOut << "  Host version      : " << verText(*Shared::servMajor, *Shared::servMinor, *Shared::servPatch) << endl;
+        txtOut << "  Client address    : " << Shared::socket->localAddress().toString() << endl;
+        txtOut << "  Host address      : " << Shared::socket->peerAddress().toString()  << endl;
+        txtOut << "  Session id        : " << Shared::sessionId->toHex()                << endl;
+        txtOut << "  Host version      : " << verText()                                 << endl;
         txtOut << "  GEN_FILE commands : ";
 
         QStringList genCmds = Shared::genfileCmds->values();

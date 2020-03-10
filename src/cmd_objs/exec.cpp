@@ -65,13 +65,13 @@ QString Term::longText()  {return TXT_Term;}
 
 Halt::Halt(QObject *parent) : Command(parent)
 {
-    setObjectName("halt");
+    setObjectName("yield");
 
     Shared::hookBypass->append(objectName());
     Shared::clientCmds->insert(objectName(), this);
 }
 
-QString Halt::shortText() {return tr("halt/pause the currently running host command.");}
+QString Halt::shortText() {return tr("yield/pause the currently running host command.");}
 QString Halt::ioText()    {return tr("[none]/[CMD_ID]");}
 QString Halt::longText()  {return TXT_Term;}
 

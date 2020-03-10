@@ -1,6 +1,6 @@
 # Cmdr #
 
-Cmdr is a command line terminal emulator client for MRCI host using text input/output. This helps administer MRCI host via local or remote TCP connections encrypted with TLS/SSL using the MRCI protocol. It also supports file transfers to/from the client using the GEN_FILE sub-protocol that MRCI understands.
+Cmdr is a command line terminal emulator client for MRCI host using text input/output. This help administer MRCI host via local or remote TCP connections encrypted with TLS/SSL using the MRCI protocol. It also supports file transfers to/from the client using the GEN_FILE sub-protocol that MRCI understands.
 
 ### Usage ###
 
@@ -8,13 +8,12 @@ Cmdr have it's own terminal display so there is no command line switches to pass
 
 ### Versioning System ###
 
-This application uses the typical 3 number versioning system: [major].[minor].[patch]
+This application uses a 2 number versioning system: [major].[minor]
 
-* Major - this indicates any major changes to the application or changes that render user data of different majors incompatible.
-* Minor - this indicates changes to the code that still maintains compatibility with existing user data.
-* Patch - this indicates changes that won't require any behaviour changes at all.
+* Major - this indicates any changes that cause old configuration or library files to be incompatible.
+* Minor - this indicates changes to the code that still maintains compatibility with existing config files or libraries.
 
-Any increments to major resets minor and patch to 0.
+Any increments to major resets minor to 0.
 
 ### The Protocol ###
 
@@ -58,20 +57,21 @@ notes:
 
 * The **appName** is the name of the client application that is connected to the host. It can also contain the client's app version if needed because it doesn't follow any particular standard.
 
-* The **coName** is the common name of a SSL certificate that is currently installed in the host. Depending on how the host is configured, it can contain more than one installed SSL cert so coName can be used by clients as a way to request which one of the SSL certs to use during the SSL handshake.
+* The **coName** is the common name of a SSL certificate that is currently installed in the host. Depending on how the host is configured, it can contain more than one installed SSL cert so coName can be used by clients as a way to request which one of the SSL certs to use during the SSL handshake. If the client doesn't know which cert to request, it is good practice to use the address that was used to connect to the host.
 
 ### Host Header ###
 
 ```
 Format:
 
-[reply][major][minor][patch][sesId]
+[reply][major][minor][tcp_rev][mod_rev][sesId]
 
-reply - 1byte   - 8bit little endian unsigned int
-major - 2bytes  - 16bit little endian unsigned int
-minor - 2bytes  - 16bit little endian unsigned int
-patch - 2bytes  - 16bit little endian unsigned int
-sesId - 28bytes - 224bit sha3 hash
+reply   - 1byte   - 8bit little endian unsigned int
+major   - 2bytes  - 16bit little endian unsigned int
+minor   - 2bytes  - 16bit little endian unsigned int
+tcp_rev - 2bytes  - 16bit little endian unsigned int
+mod_rev - 2bytes  - 16bit little endian unsigned int
+sesId   - 28bytes - 224bit sha3 hash
 ```
 
 notes:
@@ -82,7 +82,7 @@ notes:
     * reply = 2, means the client is acceptable but the host will now send it's Pem formatted SSL cert data in a ```HOST_CERT``` mrci frame just after sending it's header. After receiving the cert, the client will then need to send a STARTTLS signal using this cert.
     * reply = 4, means the host was unable to find the SSL cert associated with the common name sent by the client. The session will auto close at this point.
 
-* **major**, **minor**, **path** these 3 numeric values are the host version number that also use a 3 number versioning system. This can be used by the client to setup backwards compatibility or determine of if supports the host at all. If not supported, the client can simply disconnect form the host.
+* **major**, **minor**, **tcp_rev**, **mod_rev** these 4 numeric values are the host version number that uses a 4 number versioning system. This can be used by the client to setup backwards compatibility or determine of if supports the host at all. If not supported, the client can simply disconnect form the host and display an error to the user.
 
 * **sesId** is the session id. It is a unique 224bit sha3 hash that can be used by the host and client to uniquely identify the current session or past sessions.
 
@@ -106,7 +106,7 @@ makeself
 Linux_build.sh is a custom script designed to build this project from the source code using qmake, make and makeself. You can pass 2 optional arguments:
 
 1. The path to the QT bin folder in case you want to compile with a QT install not defined in PATH.
-2. Path of the output makeself file (usually has a .run extension). If not given, the outfile will be named cmdr-x.x.x.run in the source code folder.
+2. Path of the output makeself file (usually has a .run extension). If not given, the outfile will be named cmdr-x.x.run in the source code folder.
 
 Build:
 ```
@@ -115,6 +115,6 @@ sh ./linux_build.sh
 ```
 Install:
 ```
-chmod +x ./cmdr-x.x.x.run
-./cmdr-x.x.x.run
+chmod +x ./cmdr-x.x.run
+./cmdr-x.x.run
 ```

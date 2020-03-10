@@ -23,7 +23,7 @@ CmdLine::CmdLine(QWidget *parent) : QComboBox(parent)
 
     setEditable(true);
     setDuplicatesEnabled(true);
-    loadTextSettings(localData, this);
+    loadTheme(localData, this);
 
     if (!localData->contains("command_hist"))
     {

@@ -16,7 +16,7 @@
 //    along with Cmdr under the LICENSE.md file. If not, see
 //    <http://www.gnu.org/licenses/>.
 
-void setupTextSettings(QJsonObject *data)
+void setupThemeSettings(QJsonObject *data)
 {
     QString txtColorStr = "#FBFBD7";
     QString bgColorStr  = "#363A49";
@@ -26,9 +26,9 @@ void setupTextSettings(QJsonObject *data)
 
     QJsonObject obj;
 
-    if (data->contains("text_settings"))
+    if (data->contains("theme"))
     {
-        obj = data->value("text_settings").toObject();
+        obj = data->value("theme").toObject();
 
         if (!obj.contains("text_color"))  obj.insert("text_color", txtColorStr);
         if (!obj.contains("err_color"))   obj.insert("err_color", errColorStr);
@@ -45,7 +45,7 @@ void setupTextSettings(QJsonObject *data)
         obj.insert("font_size", fontSize);
     }
 
-    data->insert("text_settings", obj);
+    data->insert("theme", obj);
 
     if (!data->contains("max_lines"))
     {
@@ -55,18 +55,26 @@ void setupTextSettings(QJsonObject *data)
     saveLocalData(data);
 }
 
-void loadTextSettings(QJsonObject *data, QWidget *widget)
+void loadTheme(QJsonObject *data, QWidget *widget, bool setHighlight)
 {
-    QString  bgColor   = data->value("text_settings").toObject().value("bg_color").toString();
-    QString  txtColor  = data->value("text_settings").toObject().value("text_color").toString();
-    QString  fntFamily = data->value("text_settings").toObject().value("font_family").toString();
-    QString  fntSize   = data->value("text_settings").toObject().value("font_size").toString();
+    QString  bgColor   = data->value("theme").toObject().value("bg_color").toString();
+    QString  txtColor  = data->value("theme").toObject().value("text_color").toString();
+    QString  fntFamily = data->value("theme").toObject().value("font_family").toString();
+    QString  fntSize   = data->value("theme").toObject().value("font_size").toString();
     QPalette pal       = widget->palette();
     QFont    fnt       = widget->font();
 
     pal.setColor(QPalette::Active, QPalette::Base, QColor(bgColor));
     pal.setColor(QPalette::Inactive, QPalette::Base, QColor(bgColor));
     pal.setColor(QPalette::Active, QPalette::Text, QColor(txtColor));
+    pal.setColor(QPalette::Inactive, QPalette::Text, QColor(txtColor));
+
+    if (setHighlight)
+    {
+        pal.setColor(QPalette::Active, QPalette::Highlight, QColor(txtColor));
+        pal.setColor(QPalette::Inactive, QPalette::Highlight, QColor(txtColor));
+    }
+
     fnt.setFamily(fntFamily);
     fnt.setPointSize(fntSize.toInt());
 
@@ -335,9 +343,16 @@ QString boolText(bool state)
     else       return QString("False");
 }
 
-QString verText(quint16 maj, quint16 min, quint16 patch)
+QString verText()
 {
-    return QString::number(maj) + "." + QString::number(min) + "." + QString::number(patch);
+    QString ret;
+
+    ret.append(QString::number(*Shared::servMajor) + ".");
+    ret.append(QString::number(*Shared::servMinor) + ".");
+    ret.append(QString::number(*Shared::tcpRev) + ".");
+    ret.append(QString::number(*Shared::modRev));
+
+    return ret;
 }
 
 QString getParam(const QString &key, const QStringList &args)
@@ -395,7 +410,8 @@ QByteArray               *Shared::sessionId       = nullptr;
 QString                  *Shared::clientHookedCmd = nullptr;
 ushort                   *Shared::servMajor       = nullptr;
 ushort                   *Shared::servMinor       = nullptr;
-ushort                   *Shared::servPatch       = nullptr;
+ushort                   *Shared::tcpRev          = nullptr;
+ushort                   *Shared::modRev          = nullptr;
 QString                  *Shared::hostAddress     = nullptr;
 quint16                  *Shared::hostPort        = nullptr;
 quint16                  *Shared::termCmdId       = nullptr;
@@ -411,6 +427,7 @@ QWidget                  *Shared::mainWidget      = nullptr;
 QList<quint8>            *Shared::idCache         = nullptr;
 QList<QString>           *Shared::txtCache        = nullptr;
 ThreadKiller             *Shared::theadKiller     = nullptr;
+QProgressBar             *Shared::prog            = nullptr;
 
 bool Shared::cacheTxt(CacheOp op, quint8 &typeId, QString &txt)
 {
@@ -421,7 +438,8 @@ bool Shared::cacheTxt(CacheOp op, quint8 &typeId, QString &txt)
 
     if (op == TXT_IN)
     {
-        if ((typeId == TEXT) || (typeId == ERR) || (typeId == BIG_TEXT) || (typeId == PRIV_TEXT))
+        if ((typeId == TEXT)      || (typeId == ERR) || (typeId == BIG_TEXT) ||
+            (typeId == PRIV_TEXT) || (typeId == PROMPT_TEXT))
         {
             idCache->append(typeId);
             txtCache->append(txt);

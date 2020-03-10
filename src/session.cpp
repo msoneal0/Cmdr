@@ -18,13 +18,16 @@
 
 Session::Session(QObject *parent) : QSslSocket(nullptr)
 {
-    dSize     = 0;
-    hook      = 0;
-    dType     = 0;
-    flags     = 0;
-    reconnect = false;
+    dSize          = 0;
+    hook           = 0;
+    dType          = 0;
+    flags          = 0;
+    progResetDelay = new QTimer(this);
+    activeProg     = false;
+    reconnect      = false;
 
     connect(parent, &QSslSocket::destroyed, this, &Session::deleteLater);
+    connect(progResetDelay, &QTimer::timeout, this, &Session::resetProg);
 
     connect(this, &Session::encrypted, this, &Session::handShakeDone);
     connect(this, &Session::connected, this, &Session::isConnected);
@@ -33,6 +36,9 @@ Session::Session(QObject *parent) : QSslSocket(nullptr)
     connect(this, &Session::loopDataIn, this, &Session::dataIn);
 
     connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(sockerr(QAbstractSocket::SocketError)));
+
+    progResetDelay->setInterval(200);
+    progResetDelay->setSingleShot(true);
 }
 
 void Session::hookedBinToServer(const QByteArray &data, quint8 typeId)
@@ -93,10 +99,16 @@ void Session::isConnected()
     // appName = UTF16LE string (padded with 0x00)
     // coName  = UTF16LE string (padded with 0x00)
 
+    // for MRCI host, if the client doesn't need to request a special SSL
+    // cert from the host, it is good practice to fallback to using the
+    // address used to connect to the host as the common name (coName).
+    // in this case, it is used all of the time.
+
     cacheTxt(TEXT, "Connected.\n");
 
+    auto appName = QString(APP_NAME) + " v" + QString(APP_VERSION);
+
     QByteArray header;
-    QString    appName = QString(APP_NAME) + " v" + QString(APP_VERSION);
 
     header.append(SERVER_HEADER_TAG);
     header.append(fixedToTEXT(appName, 134));
@@ -115,9 +127,9 @@ void Session::isConnected()
 
 void Session::handShakeDone()
 {
-    QSslCipher cipher = sessionCipher();
-    QString    txt;
+    auto cipher = sessionCipher();
 
+    QString     txt;
     QTextStream txtOut(&txt);
 
     txtOut << "SSL Handshake sucessful."                             << endl
@@ -140,7 +152,8 @@ void Session::isDisconnected()
 
     *Shared::servMajor       = 0;
     *Shared::servMinor       = 0;
-    *Shared::servPatch       = 0;
+    *Shared::tcpRev          = 0;
+    *Shared::modRev          = 0;
     *Shared::connectedToHost = false;
 
     Shared::sessionId->clear();
@@ -194,11 +207,11 @@ void Session::termHostCmd()
     }
 }
 
-void Session::haltHostCmd()
+void Session::yieldHostCmd()
 {
     if (hook != 0)
     {
-        binToServer(hook, QByteArray(), HALT_CMD);
+        binToServer(hook, QByteArray(), YIELD_CMD);
     }
 }
 
@@ -278,7 +291,7 @@ void Session::procAsync(const QByteArray &data)
     {
         if ((dType == CMD_ID) && (data.size() == 2))
         {
-            quint16 id = static_cast<quint16>(rdInt(data.mid(0, 2)));
+            auto id = static_cast<quint16>(rdInt(data.mid(0, 2)));
 
             if (id == hook) hook = 0;
 
@@ -314,6 +327,31 @@ void Session::idle()
     hook = 0;
 }
 
+void Session::resetProg()
+{
+    emit setProg(0);
+    emit showProg(false);
+
+    activeProg = false;
+}
+
+void Session::startProg()
+{
+    emit showProg(true);
+
+    activeProg = true;
+}
+
+void Session::updateProg(int value)
+{
+    emit setProg(value);
+
+    if (!activeProg)
+    {
+        startProg();
+    }
+}
+
 void Session::dataFromHost(const QByteArray &data)
 {
     if (isAsync(cmdId))
@@ -322,12 +360,27 @@ void Session::dataFromHost(const QByteArray &data)
     }
     else if ((cmdId == hook) && (branId == 0) && (hook != 0))
     {
-        if ((dType == TEXT) || (dType == PRIV_TEXT) || (dType == BIG_TEXT) || (dType == ERR))
+        if ((dType == TEXT) || (dType == PRIV_TEXT) || (dType == BIG_TEXT) || (dType == ERR) || (dType == PROMPT_TEXT))
         {
             cacheTxt(dType, fromTEXT(data));
         }
+        else if (dType == PROG)
+        {
+            updateProg(rdInt(data));
+        }
+        else if (dType == PROG_LAST)
+        {
+            progResetDelay->start();
+
+            updateProg(rdInt(data));
+        }
         else if (dType == IDLE)
         {
+            if (activeProg && !progResetDelay->isActive())
+            {
+                resetProg();
+            }
+
             idle();
         }
         else if ((dType == GEN_FILE) && (flags & GEN_FILE_ON))
@@ -354,7 +407,7 @@ void Session::dataIn()
     {
         if (bytesAvailable() >= FRAME_HEADER_LEN)
         {
-            QByteArray header = read(FRAME_HEADER_LEN);
+            auto header = read(FRAME_HEADER_LEN);
 
             dType  = static_cast<quint8>(header[0]);
             cmdId  = static_cast<quint16>(rdInt(header.mid(1, 2)));
@@ -367,7 +420,7 @@ void Session::dataIn()
     }
     else if (bytesAvailable() >= SERVER_HEADER_LEN)
     {
-        // host header format: [1byte(reply)][2bytes(major)][2bytes(minor)][2bytes(patch)][28bytes(sesId)]
+        // host header format: [1byte(reply)][2bytes(major)][2bytes(minor)][2bytes(tcp_rev)][2bytes(mod_rev)][28bytes(sesId)]
 
         // reply is an 8bit little endian int the indicates the result of the client header
         // sent to the host from the isConnected() function.
@@ -377,17 +430,22 @@ void Session::dataIn()
         // minor = 16bit little endian uint (host ver minor)
         // patch = 16bit little endian uint (host ver patch)
 
-        quint8 reply = static_cast<quint8>(rdInt(read(1)));
+        // reply 1: client header acceptable, SSL handshake not needed.
+        // reply 2: client header acceptable, SSL handshake needed (STARTTLS).
+        // reply 4: the common name sent by the client header was not found.
+
+        auto reply = static_cast<quint8>(rdInt(read(1)));
 
         if ((reply == 1) || (reply == 2))
         {
             *Shared::servMajor = static_cast<quint16>(rdInt(read(2)));
             *Shared::servMinor = static_cast<quint16>(rdInt(read(2)));
-            *Shared::servPatch = static_cast<quint16>(rdInt(read(2)));
+            *Shared::tcpRev    = static_cast<quint16>(rdInt(read(2)));
+            *Shared::modRev    = static_cast<quint16>(rdInt(read(2)));
 
-            cacheTxt(TEXT, "Detected host version: " + verText(*Shared::servMajor, *Shared::servMinor, *Shared::servPatch) + "\n");
+            cacheTxt(TEXT, "Detected host version: " + verText() + "\n");
 
-            if (*Shared::servMajor == 2)
+            if (*Shared::tcpRev == 0)
             {
                 *Shared::sessionId       = read(28);
                 *Shared::connectedToHost = true;

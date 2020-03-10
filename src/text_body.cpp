@@ -44,7 +44,7 @@ void TextWorker::dumpTxtCache()
     {
         *Shared::activeDisp = !Shared::cacheTxt(Shared::TXT_IS_EMPTY);
 
-        if ((typeId == TEXT) || (typeId == PRIV_TEXT))
+        if ((typeId == TEXT) || (typeId == PRIV_TEXT) | (typeId == PROMPT_TEXT))
         {
             addMainTxt(txt);
 
@@ -103,8 +103,8 @@ void TextWorker::addBigTxt(const QString &txt)
 
 void TextWorker::loadSettings()
 {
-    mainColor = localData->value("text_settings").toObject().value("text_color").toString();
-    errColor  = localData->value("text_settings").toObject().value("err_color").toString();
+    mainColor = localData->value("theme").toObject().value("text_color").toString();
+    errColor  = localData->value("theme").toObject().value("err_color").toString();
 }
 
 TextBody::TextBody(QWidget *parent) : QTextEdit(parent)
@@ -116,7 +116,7 @@ TextBody::TextBody(QWidget *parent) : QTextEdit(parent)
     setDocument(txtDocument);
     setReadOnly(true);
     setWordWrapMode(QTextOption::NoWrap);
-    loadTextSettings(localData, this);
+    loadTheme(localData, this);
     loadTextBodySettings();
 }
 
@@ -134,7 +134,7 @@ void TextBody::reload()
 {
     clear();
 
-    loadTextSettings(localData, this);
+    loadTheme(localData, this);
     saveLocalData(localData);
     loadTextBodySettings();
 }

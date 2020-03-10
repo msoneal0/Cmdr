@@ -5,7 +5,7 @@ installer_file="$2"
 
 src_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 bin_name="cmdr"
-app_version="2.2.0"
+app_version="3.0"
 app_name="Cmdr"
 install_dir="/opt/$bin_name"
 bin_dir="/usr/bin"
@@ -38,7 +38,7 @@ fi
 if [ $? -eq 0 -a -d "$qt_dir" ]; then
 
   mkdir -vp $tmp_dir
-  cp -rv $src_dir/. $tmp_dir
+  cp -r $src_dir/. $tmp_dir
   cd $tmp_dir
   qmake -config release
  

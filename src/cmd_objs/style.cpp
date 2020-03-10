@@ -20,8 +20,8 @@ void checkArgs(bool *changed, QJsonObject *jsonData, const QString &arg, const Q
 {
     if (argExists(arg, args))
     {
-        QString     data = getParam(arg, args);
-        QJsonObject obj  = jsonData->value("text_settings").toObject();
+        auto data = getParam(arg, args);
+        auto obj  = jsonData->value("theme").toObject();
 
         if (data.isEmpty())
         {
@@ -62,7 +62,7 @@ void checkArgs(bool *changed, QJsonObject *jsonData, const QString &arg, const Q
 
         if (*changed)
         {
-            jsonData->insert("text_settings", obj);
+            jsonData->insert("theme", obj);
         }
     }
 }
@@ -108,14 +108,14 @@ QString SetMaxLines::longText()  {return TXT_SetMaxLines;}
 
 void SetColors::dataIn(const QString &argsLine)
 {
-    bool        changed = false;
-    QStringList args    = parseArgs(argsLine);
+    auto changed = false;
+    auto args    = parseArgs(argsLine);
 
     checkArgs(&changed, localData, "-text",  args, "text_color", "#FBFBD7");
     checkArgs(&changed, localData, "-error", args, "err_color",  "#BB55D8");
     checkArgs(&changed, localData, "-bg",    args, "bg_color",   "#363A49");
 
-    QJsonObject obj = localData->value("text_settings").toObject();
+    auto obj = localData->value("theme").toObject();
 
     cacheTxt(TEXT, "text:  " + obj.value("text_color").toString() + "\n");
     cacheTxt(TEXT, "error: " + obj.value("err_color").toString() + "\n");
@@ -126,13 +126,13 @@ void SetColors::dataIn(const QString &argsLine)
 
 void SetFont::dataIn(const QString &argsLine)
 {
-    bool        changed = false;
-    QStringList args    = parseArgs(argsLine);
+    auto changed = false;
+    auto args    = parseArgs(argsLine);
 
     checkArgs(&changed, localData, "-name",  args, "font_family", "courier");
     checkArgs(&changed, localData, "-size", args, "font_size",  "9");
 
-    QJsonObject obj = localData->value("text_settings").toObject();
+    auto obj = localData->value("theme").toObject();
 
     cacheTxt(TEXT, "family: " + obj.value("font_family").toString() + "\n");
     cacheTxt(TEXT, "size:   " + obj.value("font_size").toString() + "\n");
@@ -142,8 +142,8 @@ void SetFont::dataIn(const QString &argsLine)
 
 void SetMaxLines::dataIn(const QString &argsLine)
 {
-    QStringList args   = parseArgs(argsLine);
-    QString     valStr = getParam("-value", args);
+    auto args   = parseArgs(argsLine);
+    auto valStr = getParam("-value", args);
 
     if (valStr.isEmpty())
     {
@@ -152,7 +152,7 @@ void SetMaxLines::dataIn(const QString &argsLine)
     else
     {
         bool ok;
-        int  val = valStr.toInt(&ok);
+        auto val = valStr.toInt(&ok);
 
         if (!ok)
         {
