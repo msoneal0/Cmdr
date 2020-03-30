@@ -20,7 +20,10 @@ SaveBookmark::SaveBookmark(QObject *parent) : Command(parent)
 {
     setObjectName("save_bookmark");
 
-    Shared::clientCmds->insert(objectName(), this);
+    if (!Shared::clientCmds->contains(objectName()))
+    {
+        Shared::clientCmds->insert(objectName(), this);
+    }
 }
 
 QString SaveBookmark::shortText() {return tr("create or update a host bookmark.");}
@@ -76,8 +79,8 @@ void SaveBookmark::run(const QString &name, QStringList &args)
 
     if (file.open(QFile::WriteOnly | QFile::Truncate))
     {
-        QString addr = getParam("-addr", args);
-        int     port = getParam("-port", args).toInt();
+        auto addr = getParam("-addr", args);
+        auto port = getParam("-port", args).toInt();
 
         if (addr.isEmpty()) addr = *Shared::hostAddress;
         if (port == 0)      port = *Shared::hostPort;
@@ -124,9 +127,9 @@ void SaveBookmark::dataIn(const QString &argsLine)
     }
     else
     {
-        QStringList args  = parseArgs(argsLine);
-        bool        force = argExists("-force", args);
-        QString     name  = getParam("-name", args);
+        auto args  = parseArgs(argsLine);
+        auto force = argExists("-force", args);
+        auto name  = getParam("-name", args);
 
         if (name.isEmpty())
         {
@@ -173,8 +176,8 @@ void ListBookmarks::dataIn(const QString &argsLine)
 
 void DeleteBookmark::dataIn(const QString &argsLine)
 {
-    QStringList args = parseArgs(argsLine);
-    QString     name = getParam("-name", args);
+    auto args = parseArgs(argsLine);
+    auto name = getParam("-name", args);
 
     if (name.isEmpty())
     {
@@ -182,7 +185,7 @@ void DeleteBookmark::dataIn(const QString &argsLine)
     }
     else
     {
-        QString path = appDataDir() + BOOKMARK_FOLDER + "/" + name + ".json";
+        auto path = appDataDir() + BOOKMARK_FOLDER + "/" + name + ".json";
 
         if (!QFile::remove(path))
         {
@@ -193,8 +196,8 @@ void DeleteBookmark::dataIn(const QString &argsLine)
 
 void SeeBookmark::dataIn(const QString &argsLine)
 {
-    QStringList args = parseArgs(argsLine);
-    QString     name = getParam("-name", args);
+    auto args = parseArgs(argsLine);
+    auto name = getParam("-name", args);
 
     if (name.isEmpty())
     {
@@ -202,13 +205,13 @@ void SeeBookmark::dataIn(const QString &argsLine)
     }
     else
     {
-        QString path = appDataDir() + BOOKMARK_FOLDER + "/" + name + ".json";
+        auto path = appDataDir() + BOOKMARK_FOLDER + "/" + name + ".json";
 
         QFile file(path, this);
 
         if (file.open(QFile::ReadOnly))
         {
-            QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+            auto doc = QJsonDocument::fromJson(file.readAll());
 
             cacheTxt(TEXT, "address: " + doc.object().value("address").toString() + "\n");
             cacheTxt(TEXT, "port:    " + QString::number(doc.object().value("port").toInt()) + "\n");

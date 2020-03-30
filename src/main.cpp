@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
     new SetFont(&app);
     new SetMaxLines(&app);
     new Genfile(&app);
+    new ListCmds(&app);
 
     setupClientCmds();
     setupCmdLine();

@@ -89,13 +89,18 @@ QString Resume::longText()  {return TXT_Term;}
 
 void Connect::dataIn(const QString &argsLine)
 {
-    QStringList args = parseArgs(argsLine);
+    auto args = parseArgs(argsLine);
 
     *Shared::hostAddress = getParam("-addr", args);
     *Shared::hostPort    = getParam("-port", args).toUShort();
 
-    QString saveName = getParam("-save", args);
-    QString loadName = getParam("-load", args);
+    auto saveName = getParam("-save", args);
+    auto loadName = getParam("-load", args);
+
+    if (*Shared::hostPort == 0)
+    {
+        *Shared::hostPort = DEFAULT_PORT;
+    }
 
     if (!saveName.isEmpty())
     {
@@ -108,7 +113,7 @@ void Connect::dataIn(const QString &argsLine)
 
         if (file.open(QFile::ReadOnly))
         {
-            QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+            auto doc = QJsonDocument::fromJson(file.readAll());
 
             *Shared::hostAddress = doc.object().value("address").toString();
             *Shared::hostPort    = static_cast<quint16>(doc.object().value("port").toInt());
@@ -128,10 +133,6 @@ void Connect::dataIn(const QString &argsLine)
     else if (QHostAddress(*Shared::hostAddress).isNull())
     {
         cacheTxt(ERR, "err: '" + *Shared::hostAddress + "' is not a valid address.\n");
-    }
-    else if (*Shared::hostPort == 0)
-    {
-        cacheTxt(ERR, "err: The host port cannot be 0.\n");
     }
     else
     {

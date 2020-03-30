@@ -28,7 +28,6 @@ class About : public Command
 private:
 
     void dispInfo(Command *cmdObj);
-    void listCmds(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, int largestCmd);
     bool dispInfo(const QString &cmdName);
     bool dispClientCmd(const QString &cmdName);
     bool dispHostCmd(const QString &cmdName);
@@ -47,6 +46,29 @@ public slots:
 
     void dataIn(const QString &argsLine);
     void onStartup();
+};
+
+//--------------------------
+
+class ListCmds : public Command
+{
+    Q_OBJECT
+
+private:
+
+    void ls(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, const QString &title);
+
+public:
+
+    QString shortText();
+    QString ioText();
+    QString longText();
+
+    explicit ListCmds(QObject *parent = nullptr);
+
+public slots:
+
+    void dataIn(const QString &argsLine);
 };
 
 #endif // INFO_H

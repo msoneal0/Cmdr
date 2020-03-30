@@ -71,4 +71,7 @@ set or view the maximum amount of lines of text that can be displayed in this ap
 to set this limit or leave it out to display what the limit is currently set at. this has a minimum value \
 of 50 and a maxmum of 100000."
 
+#define TXT_ListCmds "\
+list all commands currently available for runnning (host and client)."
+
 #endif // LONG_TXT_H

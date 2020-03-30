@@ -70,12 +70,13 @@
 #define DEFAULT_HIST_LIMIT 100
 #define DEFAULT_MAX_LINES  1000
 #define RDBUFF             16777215
+#define DEFAULT_PORT       35516
 #define TXT_CODEC          "UTF-16LE"
 #define BOOKMARK_FOLDER    "bookmarks"
 #define CONFIG_FILENAME    "config_v3.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "3.0"
+#define APP_VERSION        "3.1"
 
 enum TypeID : quint8
 {

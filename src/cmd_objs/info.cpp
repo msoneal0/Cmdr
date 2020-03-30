@@ -24,9 +24,20 @@ About::About(QObject *parent) : Command(parent)
 }
 
 void    About::onStartup() {dataIn(QString());}
-QString About::shortText() {return tr("display information about this MRCI client and display all available commands.");}
+QString About::shortText() {return tr("display information about the client or a command.");}
 QString About::ioText()    {return tr("[{cmd_name}]/[text]");}
 QString About::longText()  {return TXT_About;}
+
+ListCmds::ListCmds(QObject *parent) : Command(parent)
+{
+    setObjectName("ls_cmds");
+
+    Shared::clientCmds->insert(objectName(), this);
+}
+
+QString ListCmds::shortText() {return tr("display all available commands.");}
+QString ListCmds::ioText()    {return tr("[none]/[text]");}
+QString ListCmds::longText()  {return TXT_ListCmds;}
 
 void About::dispInfo(Command *cmdObj)
 {
@@ -86,25 +97,13 @@ bool About::dispInfo(const QString &cmdName)
     }
 }
 
-void About::listCmds(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, int largestCmd)
-{
-    QStringList cmdNames = cmdObjs->keys();
-
-    cmdNames.sort(Qt::CaseInsensitive);
-
-    for (int i = 0; i < cmdNames.size(); ++i)
-    {
-        wordWrap(cmdNames[i].leftJustified(largestCmd, ' ') + " - ", txtOut, cmdObjs->value(cmdNames[i])->shortText(), Shared::mainWidget);
-    }
-}
-
 void About::dataIn(const QString &argsLine)
 {
-    QStringList args = parseArgs(argsLine);
+    auto args = parseArgs(argsLine);
 
     if (args.size() > 0)
     {
-        QString cmdName = args[0].toLower().trimmed();
+        auto cmdName = args[0].toLower().trimmed();
 
         if (!dispInfo(cmdName))
         {
@@ -120,21 +119,8 @@ void About::dataIn(const QString &argsLine)
         txtOut << "Based on QT " << QT_VERSION_STR << " " << 8 * QT_POINTER_SIZE << "bit"     << endl << endl;
         txtOut << "The program is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE" << endl;
         txtOut << "WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE." << endl << endl;
-        txtOut << "usage: <command> <arguments>"                                              << endl << endl;
-        txtOut << "<command>"                                                                 << endl << endl;
-
-        QStringList cmdNames   = Shared::clientCmds->keys() + Shared::hostDocs->keys();
-        int         largestCmd = 0;
-
-        for (int i = 0; i < cmdNames.size(); ++i)
-        {
-            if (cmdNames[i].size() > largestCmd) largestCmd = cmdNames[i].size();
-        }
-
-        listCmds(Shared::clientCmds, txtOut, largestCmd);
-        listCmds(Shared::hostDocs, txtOut, largestCmd);
-
-        txtOut << endl << endl << "for more detailed information about a command type: about <command>" << endl << endl;
+        txtOut << "run: 'ls_cmds' to see all available commands."                             << endl << endl;
+        txtOut << "for more detailed information about a command run: 'about <command>'"      << endl << endl;
 
         cacheTxt(TEXT, txt);
     }
@@ -143,4 +129,41 @@ void About::dataIn(const QString &argsLine)
 void About::run()
 {
     dataIn(QString());
+}
+
+void ListCmds::ls(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, const QString &title)
+{
+    if (!cmdObjs->isEmpty())
+    {
+        auto cmdNames   = cmdObjs->keys();
+        auto largestCmd = 0;
+
+        for (int i = 0; i < cmdNames.size(); ++i)
+        {
+            if (cmdNames[i].size() > largestCmd) largestCmd = cmdNames[i].size();
+        }
+
+        cmdNames.sort(Qt::CaseInsensitive);
+
+        txtOut << endl;
+        txtOut << title << endl << endl;
+
+        for (int i = 0; i < cmdNames.size(); ++i)
+        {
+            wordWrap(cmdNames[i].leftJustified(largestCmd, ' ') + " - ", txtOut, cmdObjs->value(cmdNames[i])->shortText(), Shared::mainWidget);
+        }
+    }
+}
+
+void ListCmds::dataIn(const QString &argsLine)
+{
+    Q_UNUSED(argsLine)
+
+    QString     txt;
+    QTextStream txtOut(&txt);
+
+    ls(Shared::clientCmds, txtOut, "Client Commands:");
+    ls(Shared::hostDocs, txtOut, "Host Commands:");
+
+    cacheTxt(TEXT, txt);
 }
