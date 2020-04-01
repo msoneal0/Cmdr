@@ -242,14 +242,27 @@ bool Session::isAsync(quint16 id)
 
 void Session::procAsync(const QByteArray &data)
 {
-    if ((dType == TEXT) || (dType == BIG_TEXT) || (dType == ERR))
+    if (cmdId == ASYNC_CAST)
+    {
+        if (dType == TEXT)
+        {
+            cacheTxt(dType, "\ncast_text: " + fromTEXT(data) + "\n");
+        }
+        else if (dType == BIG_TEXT)
+        {
+            QString     txt;
+            QTextStream stream(&txt);
+
+            wordWrap("cast_text: ", stream, fromTEXT(data), Shared::mainWidget);
+            cacheTxt(TEXT, "\n");
+            cacheTxt(TEXT, txt);
+        }
+    }
+    else if (cmdId == ASYNC_RDY)
     {
         cacheTxt(dType, fromTEXT(data));
 
-        if (cmdId == ASYNC_RDY)
-        {
-            hook = 0;
-        }
+        hook = 0;
     }
     else if (cmdId == ASYNC_SYS_MSG)
     {

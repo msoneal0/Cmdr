@@ -82,7 +82,7 @@ notes:
     * reply = 2, means the client is acceptable but the host will now send it's Pem formatted SSL cert data in a ```HOST_CERT``` mrci frame just after sending it's header. After receiving the cert, the client will then need to send a STARTTLS signal using this cert.
     * reply = 4, means the host was unable to find the SSL cert associated with the common name sent by the client. The session will auto close at this point.
 
-* **major**, **minor**, **tcp_rev**, **mod_rev** these 4 numeric values are the host version number that uses a 4 number versioning system. This can be used by the client to setup backwards compatibility or determine of if supports the host at all. If not supported, the client can simply disconnect form the host and display an error to the user.
+* **major**, **minor**, **tcp_rev**, **mod_rev** these 4 numeric values are the host version number that uses a 4 number versioning system. This can be used by the client to setup backwards compatibility or determine if it supports the host at all. If not supported, the client can simply disconnect from the host and display an error to the user.
 
 * **sesId** is the session id. It is a unique 224bit sha3 hash that can be used by the host and client to uniquely identify the current session or past sessions.
 

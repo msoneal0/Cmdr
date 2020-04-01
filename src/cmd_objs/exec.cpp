@@ -23,7 +23,7 @@ Connect::Connect(QObject *parent) : Command(parent)
     Shared::clientCmds->insert(objectName(), this);
 }
 
-QString Connect::shortText() {return tr("connect a MRCI host.");}
+QString Connect::shortText() {return tr("connect to a MRCI host.");}
 QString Connect::ioText()    {return tr("[-addr (text) -port (text) {-save (bookmark)}] or [-load (bookmark)]/[text]");}
 QString Connect::longText()  {return TXT_Connect;}
 

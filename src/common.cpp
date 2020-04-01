@@ -290,16 +290,17 @@ void wordWrap(const QString &label, QTextStream &txtOut, const QString &txtIn, Q
     // breaking mid-word and also honors line breaks by treating
     // lines with line breaks as complete text bodies.
 
-    int         width      = measureWid->width() / 8;
-    bool        labelWr    = true;
-    QString     indent     = QString(label.size(), ' ');
-    QStringList textBodies = txtIn.split('\n');
+    auto width      = measureWid->width() / 8;
+    auto labelWr    = true;
+    auto indent     = QString(label.size(), ' ');
+    auto textBodies = txtIn.split('\n');
 
     for (int i = 0; i < textBodies.size(); ++i)
     {
-        int         index = 0;
-        QStringList words = textBodies[i].split(' ');
-        QString     line;
+        auto index = 0;
+        auto words = textBodies[i].split(' ');
+
+        QString line;
 
         while(index < words.size())
         {
