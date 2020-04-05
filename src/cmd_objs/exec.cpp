@@ -130,10 +130,6 @@ void Connect::dataIn(const QString &argsLine)
     {
         cacheTxt(ERR, "err: Host address is empty.\n");
     }
-    else if (QHostAddress(*Shared::hostAddress).isNull())
-    {
-        cacheTxt(ERR, "err: '" + *Shared::hostAddress + "' is not a valid address.\n");
-    }
     else
     {
         emit connectToHost();

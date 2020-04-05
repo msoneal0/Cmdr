@@ -76,7 +76,7 @@
 #define CONFIG_FILENAME    "config_v3.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "3.2"
+#define APP_VERSION        "3.3"
 
 enum TypeID : quint8
 {
@@ -85,7 +85,6 @@ enum TypeID : quint8
     ERR            = 3,
     PRIV_TEXT      = 4,
     IDLE           = 5,
-    HOST_CERT      = 6,
     FILE_INFO      = 7,
     PEER_INFO      = 8,
     MY_INFO        = 9,

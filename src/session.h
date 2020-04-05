@@ -42,7 +42,7 @@
 
 #define SERVER_HEADER_TAG "MRCI"
 #define CLIENT_HEADER_LEN 410
-#define SERVER_HEADER_LEN 35
+#define SERVER_HEADER_LEN 37
 #define FRAME_HEADER_LEN  8
 
 class Session : public QSslSocket
@@ -76,6 +76,7 @@ private slots:
     void resetProg();
     void startProg();
     void sockerr(QAbstractSocket::SocketError err);
+    void sslErrs(const QList<QSslError> &errors);
 
 public:
 

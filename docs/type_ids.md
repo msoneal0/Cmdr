@@ -10,7 +10,6 @@ enum TypeID : quint8
     ERR            = 3,
     PRIV_TEXT      = 4,
     IDLE           = 5,
-    HOST_CERT      = 6,
     FILE_INFO      = 7,
     PEER_INFO      = 8,
     MY_INFO        = 9,
@@ -113,10 +112,7 @@ This works similarly to TERM_CMD except it will also terminate the module proces
 This type id doesn't carry any actual data, instead can be used to tell the host to pause/yield the command id and branch id that was used to send it. All modules are not obligated to support this feature but it is highly recommended to do so.
 
 ```RESUME_CMD```
-This is the other half of YIELD_CMD that tells the host to resume the command that was running. 
-
-```HOST_CERT```
-Just as the name implies, this data type is used by the host to send the host SSL certificate while setting up an SSL connection.
+This is the other half of YIELD_CMD that tells the host to resume the command that was running.
 
 ```HOST_VER```
 This data structure carries 4 numeric values that represent the host version as described in section [1.3](protocol.md).
@@ -176,8 +172,8 @@ This carry some user account and session information about a peer client connect
   1. bytes[0-27]    28bytes  - session id (224bit hash)
   2. bytes[28-59]   32bytes  - user id (256bit hash)
   3. bytes[60-107]  48bytes  - user name (TEXT - padded with 0x00)
-  4. bytes[108-235] 128bytes - app name (TEXT - padded with 0x00)
-  5. bytes[236-299] 64bytes  - disp name (TEXT - padded with 0x00)
+  4. bytes[108-241] 134bytes - app name (TEXT - padded with 0x00)
+  5. bytes[242-305] 64bytes  - disp name (TEXT - padded with 0x00)
 
   notes:
   1. the session id is unique to the peer's session connection only. it
@@ -201,9 +197,9 @@ This contains all of the information found in ```PEER_INFO``` for the local sess
 
 ```
   format:
-  1. bytes[300-427] 128bytes - email (TEXT - padded with 0x00)
-  2. bytes[428-431] 4bytes   - host rank (32bit unsigned int)
-  3. bytes[432]     1byte    - is email confirmed? (0x00 false, 0x01 true)
+  1. bytes[306-433] 128bytes - email (TEXT - padded with 0x00)
+  2. bytes[434-437] 4bytes   - host rank (32bit unsigned int)
+  3. bytes[438]     1byte    - is email confirmed? (0x00 false, 0x01 true)
 ```
 
 ```NEW_CMD```

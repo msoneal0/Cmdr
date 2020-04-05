@@ -44,20 +44,18 @@ notes:
 ### Client Header (This Application) ###
 
 ```
-[tag][appName][coName]
+[tag][appName][padding]
 
 tag     - 4bytes   - 0x4D, 0x52, 0x43, 0x49 (MRCI)
 appName - 134bytes - UTF16LE string (padded with 0x00)
-coName  - 272bytes - UTF16LE string (padded with 0x00)
+padding - 272bytes - padding of 0x00 bytes reserved for future expansion
 ```
 
 notes:
 
 * The **tag** is just a fixed ascii string "MRCI" that indicates to the host that the client is indeed attempting to use the MRCI protocol.
 
-* The **appName** is the name of the client application that is connected to the host. It can also contain the client's app version if needed because it doesn't follow any particular standard.
-
-* The **coName** is the common name of a SSL certificate that is currently installed in the host. Depending on how the host is configured, it can contain more than one installed SSL cert so coName can be used by clients as a way to request which one of the SSL certs to use during the SSL handshake. If the client doesn't know which cert to request, it is good practice to use the address that was used to connect to the host.
+* The **appName** is the name of the client application that is connected to the host. It can also contain the client's app version if needed because it doesn't follow any particular standard. This string is accessable to all modules so the commands themselves can be made aware of what app the user is currently using.
 
 ### Host Header ###
 
@@ -76,15 +74,12 @@ sesId   - 28bytes - 224bit sha3 hash
 
 notes:
 
-* **reply** is a numeric value that the host returns in it's header to communicate to the client the result of it's evaluation of the client's header.
+* **reply** is a numeric value that the host returns in it's header to communicate to the client if SSL need to initated or not.
 
-    * reply = 1, means the client is acceptable and it does not need to take any further action.
-    * reply = 2, means the client is acceptable but the host will now send it's Pem formatted SSL cert data in a ```HOST_CERT``` mrci frame just after sending it's header. After receiving the cert, the client will then need to send a STARTTLS signal using this cert.
-    * reply = 4, means the host was unable to find the SSL cert associated with the common name sent by the client. The session will auto close at this point.
+    * reply = 1, means SSL is not required so the client doesn't need to take any further action.
+    * reply = 2, means SSL is required to continue so the client needs to send a STARTLS signal.
 
-* **major**, **minor**, **tcp_rev**, **mod_rev** these 4 numeric values are the host version number that uses a 4 number versioning system. This can be used by the client to setup backwards compatibility or determine if it supports the host at all. If not supported, the client can simply disconnect from the host and display an error to the user.
-
-* **sesId** is the session id. It is a unique 224bit sha3 hash that can be used by the host and client to uniquely identify the current session or past sessions.
+* **sesId** is the session id. It is a unique 224bit sha3 hash generated against the current date and time of session creation (down to the msec) and the machine id of the host. This can be used by the host or client to uniquely identify the current session or past sessions.
 
 ### Async Commands ###
 

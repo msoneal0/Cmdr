@@ -36,6 +36,7 @@ Session::Session(QObject *parent) : QSslSocket(nullptr)
     connect(this, &Session::loopDataIn, this, &Session::dataIn);
 
     connect(this, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(sockerr(QAbstractSocket::SocketError)));
+    connect(this, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(sslErrs(QList<QSslError>)));
 
     progResetDelay->setInterval(200);
     progResetDelay->setSingleShot(true);
@@ -82,7 +83,14 @@ void Session::sockerr(QAbstractSocket::SocketError err)
     }
     else
     {
-        cacheTxt(ERR, "\nerr: " + errorString() + "\n");
+        if (sslErrors().isEmpty())
+        {
+            // a non-empty sslErrors() can assume the errors were already displayed
+            // by the sslErrs() slot so this conditional block is here to prevent
+            // the same error from getting displayed twice.
+
+            cacheTxt(ERR, "\nerr: " + errorString() + "\n");
+        }
 
         if (state() == QAbstractSocket::UnconnectedState)
         {
@@ -91,18 +99,40 @@ void Session::sockerr(QAbstractSocket::SocketError err)
     }
 }
 
+void Session::sslErrs(const QList<QSslError> &errors)
+{
+    cacheTxt(ERR, "\n");
+
+    auto canIgnore = true;
+
+    for (auto err : errors)
+    {
+        if ((err.error() == QSslError::SelfSignedCertificate) ||
+            (err.error() == QSslError::SelfSignedCertificateInChain))
+        {
+            cacheTxt(TEXT, "WARNING: the host cert is self signed.\n\n");
+        }
+        else
+        {
+            canIgnore = false;
+
+            cacheTxt(ERR, "err: " + err.errorString() + "\n");
+        }
+    }
+
+    if (canIgnore)
+    {
+        ignoreSslErrors();
+    }
+}
+
 void Session::isConnected()
 {
-    // client header format: [4bytes(tag)][134bytes(appName)][272bytes(coName)]
+    // client header format: [4bytes(tag)][134bytes(appName)][272bytes(padding)]
 
     // tag     = 0x4D, 0x52, 0x43, 0x49 (MRCI)
     // appName = UTF16LE string (padded with 0x00)
-    // coName  = UTF16LE string (padded with 0x00)
-
-    // for MRCI host, if the client doesn't need to request a special SSL
-    // cert from the host, it is good practice to fallback to using the
-    // address used to connect to the host as the common name (coName).
-    // in this case, it is used all of the time.
+    // padding = just a string of 0x00 (reserved for future expansion)
 
     cacheTxt(TEXT, "Connected.\n");
 
@@ -112,7 +142,7 @@ void Session::isConnected()
 
     header.append(SERVER_HEADER_TAG);
     header.append(fixedToTEXT(appName, 134));
-    header.append(fixedToTEXT(*Shared::hostAddress, 272));
+    header.append(QByteArray(272, 0));
 
     if (header.size() == CLIENT_HEADER_LEN)
     {
@@ -120,7 +150,7 @@ void Session::isConnected()
     }
     else
     {
-        cacheTxt(ERR, "\nerr: client bug! - header len not equal to " + QString::number(CLIENT_HEADER_LEN) + "\n");
+        cacheTxt(ERR, "\nerr: client bug! - header len not equal to " + QString::number(CLIENT_HEADER_LEN) + " bytes.\n");
         disconnectFromHost();
     }
 }
@@ -263,25 +293,6 @@ void Session::procAsync(const QByteArray &data)
         cacheTxt(dType, fromTEXT(data));
 
         hook = 0;
-    }
-    else if (cmdId == ASYNC_SYS_MSG)
-    {
-        if (dType == HOST_CERT)
-        {
-            QSslCertificate cert(data, QSsl::Pem);
-            QSslError       selfSigned(QSslError::SelfSignedCertificate, cert);
-
-            cacheTxt(TEXT, "SSL cert received.\n\n");
-
-            if (cert.isSelfSigned())
-            {
-                cacheTxt(TEXT, "WARNING: the host cert is self signed.\n\n");
-            }
-
-            ignoreSslErrors(QList<QSslError>() << selfSigned);
-            addCaCertificate(cert);
-            startClientEncryption();
-        }
     }
     else if (cmdId == ASYNC_ADD_CMD)
     {
@@ -435,32 +446,29 @@ void Session::dataIn()
     {
         // host header format: [1byte(reply)][2bytes(major)][2bytes(minor)][2bytes(tcp_rev)][2bytes(mod_rev)][28bytes(sesId)]
 
-        // reply is an 8bit little endian int the indicates the result of the client header
-        // sent to the host from the isConnected() function.
-
         // sesId = 224bit sha3 hash
         // major = 16bit little endian uint (host ver major)
         // minor = 16bit little endian uint (host ver minor)
         // patch = 16bit little endian uint (host ver patch)
 
-        // reply 1: client header acceptable, SSL handshake not needed.
-        // reply 2: client header acceptable, SSL handshake needed (STARTTLS).
-        // reply 4: the common name sent by the client header was not found.
+        // reply [1]: SSL handshake not needed.
+        // reply [2]: SSL handshake needed (STARTTLS).
 
-        auto reply = static_cast<quint8>(rdInt(read(1)));
+        auto servHeader = read(SERVER_HEADER_LEN);
+        auto reply      = static_cast<quint8>(servHeader[0]);
 
         if ((reply == 1) || (reply == 2))
         {
-            *Shared::servMajor = static_cast<quint16>(rdInt(read(2)));
-            *Shared::servMinor = static_cast<quint16>(rdInt(read(2)));
-            *Shared::tcpRev    = static_cast<quint16>(rdInt(read(2)));
-            *Shared::modRev    = static_cast<quint16>(rdInt(read(2)));
+            *Shared::servMajor = static_cast<quint16>(rdInt(servHeader.mid(1, 2)));
+            *Shared::servMinor = static_cast<quint16>(rdInt(servHeader.mid(3, 2)));
+            *Shared::tcpRev    = static_cast<quint16>(rdInt(servHeader.mid(5, 2)));
+            *Shared::modRev    = static_cast<quint16>(rdInt(servHeader.mid(7, 2)));
 
             cacheTxt(TEXT, "Detected host version: " + verText() + "\n");
 
-            if (*Shared::tcpRev == 0)
+            if (*Shared::tcpRev == 1)
             {
-                *Shared::sessionId       = read(28);
+                *Shared::sessionId       = servHeader.mid(9, 28);
                 *Shared::connectedToHost = true;
 
                 flags |= VER_OK;
@@ -469,7 +477,8 @@ void Session::dataIn()
 
                 if (reply == 2)
                 {
-                    cacheTxt(TEXT, "Awaiting SSL cert from the host.\n");
+                    cacheTxt(TEXT, "Starting SSL handshake.\n");
+                    startClientEncryption();
                 }
                 else
                 {
@@ -481,10 +490,6 @@ void Session::dataIn()
                 cacheTxt(ERR, "err: Host not compatible.\n");
                 disconnectFromHost();
             }
-        }
-        else if (reply == 4)
-        {
-            cacheTxt(ERR, "err: The host was unable to find a SSL cert for common name: " + *Shared::hostAddress + ".\n");
         }
         else
         {
