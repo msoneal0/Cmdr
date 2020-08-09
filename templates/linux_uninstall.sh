@@ -1,0 +1,21 @@
+#!/bin/sh
+rm -v /usr/bin/$app_target
+rm -rv $install_dir
+rm -v /usr/share/icons/hicolor/8x8/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/16x16/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/22x22/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/24x24/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/32x32/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/36x36/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/42x42/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/48x48/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/64x64/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/72x72/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/96x96/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/128x128/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/192x192/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/256x256/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/512x512/apps/$app_target.png
+rm -v /usr/share/icons/hicolor/scalable/apps/$app_target.svg
+rm -v /usr/share/applications/$app_target.desktop
+echo "Uninstallation Complete"

@@ -34,20 +34,20 @@ void Status::dataIn(const QString &argsLine)
     QString     txt;
     QTextStream txtOut(&txt);
 
-    txtOut << "--Local data" << endl << endl;
-    txtOut << "  Client version : " << QCoreApplication::applicationVersion() << endl;
-    txtOut << "  Connected?     : " << boolText(*Shared::connectedToHost)     << endl;
-    txtOut << "  Address        : " << *Shared::hostAddress                   << endl;
-    txtOut << "  Port           : " << *Shared::hostPort                      << endl;
+    txtOut << "--Local data" << Qt::endl << Qt::endl;
+    txtOut << "  Client version : " << QCoreApplication::applicationVersion() << Qt::endl;
+    txtOut << "  Connected?     : " << boolText(*Shared::connectedToHost)     << Qt::endl;
+    txtOut << "  Address        : " << *Shared::hostAddress                   << Qt::endl;
+    txtOut << "  Port           : " << *Shared::hostPort                      << Qt::endl;
 
     if (*Shared::connectedToHost)
     {
-        txtOut << "" << endl;
-        txtOut << "--Session data" << endl << endl;
-        txtOut << "  Client address    : " << Shared::socket->localAddress().toString() << endl;
-        txtOut << "  Host address      : " << Shared::socket->peerAddress().toString()  << endl;
-        txtOut << "  Session id        : " << Shared::sessionId->toHex()                << endl;
-        txtOut << "  Host version      : " << verText()                                 << endl;
+        txtOut << "" << Qt::endl;
+        txtOut << "--Session data" << Qt::endl << Qt::endl;
+        txtOut << "  Client address    : " << Shared::socket->localAddress().toString() << Qt::endl;
+        txtOut << "  Host address      : " << Shared::socket->peerAddress().toString()  << Qt::endl;
+        txtOut << "  Session id        : " << Shared::sessionId->toHex()                << Qt::endl;
+        txtOut << "  Host version      : " << verText()                                 << Qt::endl;
         txtOut << "  GEN_FILE commands : ";
 
         QStringList genCmds = Shared::genfileCmds->values();
@@ -56,13 +56,13 @@ void Status::dataIn(const QString &argsLine)
         {
             genCmds.sort(Qt::CaseInsensitive);
 
-            txtOut << "" << endl;
+            txtOut << "" << Qt::endl;
         }
 
         for (int i = 0; i < genCmds.size(); ++i)
         {
-            if (i != 0) txtOut << "                      " << genCmds[i] << endl;
-            else        txtOut << genCmds[i] << endl;
+            if (i != 0) txtOut << "                      " << genCmds[i] << Qt::endl;
+            else        txtOut << genCmds[i] << Qt::endl;
         }
     }
 

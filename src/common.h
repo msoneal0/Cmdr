@@ -71,12 +71,11 @@
 #define DEFAULT_MAX_LINES  1000
 #define RDBUFF             16777215
 #define DEFAULT_PORT       35516
-#define TXT_CODEC          "UTF-16LE"
 #define BOOKMARK_FOLDER    "bookmarks"
 #define CONFIG_FILENAME    "config_v3.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "3.3"
+#define APP_VERSION        "3.4"
 
 enum TypeID : quint8
 {
@@ -168,11 +167,9 @@ void        wordWrap(const QString &label, QTextStream &txtOut, const QString &t
 bool        argExists(const QString &key, const QStringList &args);
 QByteArray  wrInt(quint64 num, int numOfBits);
 QByteArray  wrFrame(quint16 cmdId, const QByteArray &data, uchar dType);
-QByteArray  toTEXT(const QString &txt);
-QByteArray  fixedToTEXT(const QString &txt, int len);
+QByteArray  toFixedTEXT(const QString &txt, int len);
 QStringList parseArgs(const QByteArray &data, int maxArgs);
 QStringList parseArgs(const QString &line);
-QString     fromTEXT(const QByteArray &txt);
 QString     appDataDir();
 QString     getParam(const QString &key, const QStringList &args);
 QString     extractCmdName(const QByteArray &data);

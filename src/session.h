@@ -34,6 +34,7 @@
 #include <QSslCipher>
 #include <QSslCertificate>
 #include <QSocketNotifier>
+#include <QSslConfiguration>
 #include <QTimer>
 
 #include "cmd_objs/command.h"
@@ -41,7 +42,6 @@
 #include "cmd_objs/host_doc.h"
 
 #define SERVER_HEADER_TAG "MRCI"
-#define CLIENT_HEADER_LEN 410
 #define SERVER_HEADER_LEN 37
 #define FRAME_HEADER_LEN  8
 

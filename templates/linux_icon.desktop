@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Exec=/usr/bin/$app_target
+Name=$app_name
+GenericName=Terminal emulator for MRCI host.
+Icon=$app_target
+StartupWMClass=$app_target
+Terminal=false
+Categories=Network;Terminal;MRCI;

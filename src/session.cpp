@@ -83,7 +83,7 @@ void Session::sockerr(QAbstractSocket::SocketError err)
     }
     else
     {
-        if (sslErrors().isEmpty())
+        if (sslHandshakeErrors().isEmpty())
         {
             // a non-empty sslErrors() can assume the errors were already displayed
             // by the sslErrs() slot so this conditional block is here to prevent
@@ -128,11 +128,12 @@ void Session::sslErrs(const QList<QSslError> &errors)
 
 void Session::isConnected()
 {
-    // client header format: [4bytes(tag)][134bytes(appName)][272bytes(padding)]
+    // client header format: [4bytes(tag)][32bytes(appName)][128bytes(modInst)][128bytes(padding)]
 
     // tag     = 0x4D, 0x52, 0x43, 0x49 (MRCI)
-    // appName = UTF16LE string (padded with 0x00)
-    // padding = just a string of 0x00 (reserved for future expansion)
+    // appName = UTF8 string (padded with 0x00)
+    // modInst = UTF8 string (padded with 0x00)
+    // padding = 128 bytes of (0x00)
 
     cacheTxt(TEXT, "Connected.\n");
 
@@ -141,18 +142,10 @@ void Session::isConnected()
     QByteArray header;
 
     header.append(SERVER_HEADER_TAG);
-    header.append(fixedToTEXT(appName, 134));
-    header.append(QByteArray(272, 0));
+    header.append(toFixedTEXT(appName, 32));
+    header.append(QByteArray(256, 0));
 
-    if (header.size() == CLIENT_HEADER_LEN)
-    {
-        write(header);
-    }
-    else
-    {
-        cacheTxt(ERR, "\nerr: client bug! - header len not equal to " + QString::number(CLIENT_HEADER_LEN) + " bytes.\n");
-        disconnectFromHost();
-    }
+    write(header);
 }
 
 void Session::handShakeDone()
@@ -162,13 +155,13 @@ void Session::handShakeDone()
     QString     txt;
     QTextStream txtOut(&txt);
 
-    txtOut << "SSL Handshake sucessful."                             << endl
-           << "cipher details:"                                      << endl
-           << " #cipher         - " << cipher.name()                 << endl
-           << " #protocol       - " << cipher.protocolString()       << endl
-           << " #bit_depth      - " << cipher.usedBits()             << endl
-           << " #key_exchange   - " << cipher.keyExchangeMethod()    << endl
-           << " #authentication - " << cipher.authenticationMethod() << endl;
+    txtOut << "SSL Handshake sucessful."                             << Qt::endl
+           << "cipher details:"                                      << Qt::endl
+           << " #cipher         - " << cipher.name()                 << Qt::endl
+           << " #protocol       - " << cipher.protocolString()       << Qt::endl
+           << " #bit_depth      - " << cipher.usedBits()             << Qt::endl
+           << " #key_exchange   - " << cipher.keyExchangeMethod()    << Qt::endl
+           << " #authentication - " << cipher.authenticationMethod() << Qt::endl;
 
     cacheTxt(TEXT, txt);
 }
@@ -276,21 +269,21 @@ void Session::procAsync(const QByteArray &data)
     {
         if (dType == TEXT)
         {
-            cacheTxt(dType, "\ncast_text: " + fromTEXT(data) + "\n");
+            cacheTxt(dType, "\ncast_text: " + QString(data) + "\n");
         }
         else if (dType == BIG_TEXT)
         {
             QString     txt;
             QTextStream stream(&txt);
 
-            wordWrap("cast_text: ", stream, fromTEXT(data), Shared::mainWidget);
+            wordWrap("cast_text: ", stream, QString(data), Shared::mainWidget);
             cacheTxt(TEXT, "\n");
             cacheTxt(TEXT, txt);
         }
     }
     else if (cmdId == ASYNC_RDY)
     {
-        cacheTxt(dType, fromTEXT(data));
+        cacheTxt(dType, QString(data));
 
         hook = 0;
     }
@@ -386,7 +379,7 @@ void Session::dataFromHost(const QByteArray &data)
     {
         if ((dType == TEXT) || (dType == PRIV_TEXT) || (dType == BIG_TEXT) || (dType == ERR) || (dType == PROMPT_TEXT))
         {
-            cacheTxt(dType, fromTEXT(data));
+            cacheTxt(dType, QString(data));
         }
         else if (dType == PROG)
         {
@@ -466,7 +459,7 @@ void Session::dataIn()
 
             cacheTxt(TEXT, "Detected host version: " + verText() + "\n");
 
-            if (*Shared::tcpRev == 1)
+            if (*Shared::tcpRev == 2)
             {
                 *Shared::sessionId       = servHeader.mid(9, 28);
                 *Shared::connectedToHost = true;
@@ -478,6 +471,7 @@ void Session::dataIn()
                 if (reply == 2)
                 {
                     cacheTxt(TEXT, "Starting SSL handshake.\n");
+
                     startClientEncryption();
                 }
                 else

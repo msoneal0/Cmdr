@@ -138,25 +138,9 @@ QByteArray wrFrame(quint16 cmdId, const QByteArray &data, uchar dType)
     return typeBa + cmdBa + branBa + sizeBa + data;
 }
 
-QByteArray toTEXT(const QString &txt)
+QByteArray toFixedTEXT(const QString &txt, int len)
 {
-    QByteArray ret = QTextCodec::codecForName(TXT_CODEC)->fromUnicode(txt);
-
-    return ret.mid(2);
-}
-
-QByteArray fixedToTEXT(const QString &txt, int len)
-{
-    return toTEXT(txt).leftJustified(len, 0, true);
-}
-
-QString fromTEXT(const QByteArray &txt)
-{
-    QByteArray ba = txt;
-
-    ba.replace(QByteArray(2, 0x00), QByteArray());
-
-    return QTextCodec::codecForName(TXT_CODEC)->toUnicode(ba);
+    return txt.toUtf8().leftJustified(len, 0, true);
 }
 
 QByteArray wrInt(quint64 num, int numOfBits)
@@ -211,10 +195,11 @@ QStringList parseArgs(const QByteArray &data, int maxArgs)
 {
     QStringList ret;
     QString     arg;
-    QString     line      = fromTEXT(data);
-    bool        inDQuotes = false;
-    bool        inSQuotes = false;
-    bool        escaped   = false;
+
+    auto line      = QString(data);
+    auto inDQuotes = false;
+    auto inSQuotes = false;
+    auto escaped   = false;
 
     for (int i = 0; i < line.size(); ++i)
     {
@@ -280,7 +265,7 @@ QStringList parseArgs(const QByteArray &data, int maxArgs)
 
 QStringList parseArgs(const QString &line)
 {
-    return parseArgs(toTEXT(line), -1);
+    return parseArgs(line.toUtf8(), -1);
 }
 
 void wordWrap(const QString &label, QTextStream &txtOut, const QString &txtIn, QWidget *measureWid)
@@ -313,8 +298,8 @@ void wordWrap(const QString &label, QTextStream &txtOut, const QString &txtIn, Q
 
                 line.chop(1);
 
-                if (labelWr) txtOut << label << line << endl;
-                else         txtOut << indent << line << endl;
+                if (labelWr) txtOut << label << line << Qt::endl;
+                else         txtOut << indent << line << Qt::endl;
 
                 labelWr = false;
             }
@@ -325,8 +310,8 @@ void wordWrap(const QString &label, QTextStream &txtOut, const QString &txtIn, Q
                 // the case, the line is added to the return and then
                 // cleared.
 
-                if (labelWr) txtOut << label << line << endl;
-                else         txtOut << indent << line << endl;
+                if (labelWr) txtOut << label << line << Qt::endl;
+                else         txtOut << indent << line << Qt::endl;
 
                 line.clear();
 

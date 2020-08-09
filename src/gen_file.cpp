@@ -269,7 +269,7 @@ QByteArray Genfile::autoFill(const QByteArray &data)
         args.append("-len");
         args.append(len);
 
-        return toTEXT(args.join(' '));
+        return args.join(' ').toUtf8();
     }
     else
     {
@@ -372,7 +372,7 @@ void Genfile::dataIn(const QByteArray &data)
     }
     else if (flags & CONFIRM_NEEDED)
     {
-        QString ans = fromTEXT(data);
+        auto ans = QString(data);
 
         if (QRegExp("y", Qt::CaseInsensitive).exactMatch(ans))
         {

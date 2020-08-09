@@ -18,13 +18,27 @@
 
 HostDoc::HostDoc(const QByteArray &import, QObject *parent) : Command(parent)
 {
+//    ```NEW_CMD```
+//    This contains information about a new command that was added to the current session.
+
+//    ```
+//      format:
+//      1. bytes[0-1]    2bytes   - 16bit LE unsigned int (command id)
+//      2. bytes[2]      1byte    - 8bit LE unsigned int (genfile type)
+//      3. bytes[3-66]   64bytes  - command name (TEXT - padded with 0x00)
+//      4. bytes[67-130] 64bytes  - library name (TEXT - padded with 0x00)
+//      5. bytes[131-n]  variable - short text (null terminated)
+//      6. bytes[n-n]    variable - io text (null terminated)
+//      7. bytes[n-n]    variable - long text (null terminated)
+
     valid = false;
 
-    if (import.size() >= 259)
+    if (import.size() >= 131) // within safe import size
     {
-        cmdId = static_cast<quint16>(rdInt(import.mid(0, 2)));
+        cmdId = static_cast<quint16>(rdInt(import.mid(0, 2))); // 1.
 
-        QString cmdName = fromTEXT(import.mid(3, 128)).toLower();
+        auto cmdName = QString(import.mid(3, 64)).toLower(); // 3.
+
         QString num;
 
         for (int i = 1; Shared::clientCmds->contains(cmdName + num); ++i)
@@ -34,18 +48,18 @@ HostDoc::HostDoc(const QByteArray &import, QObject *parent) : Command(parent)
 
         setObjectName(cmdName + num);
 
-        if ((import[2] == GEN_UPLOAD) || (import[2] == GEN_DOWNLOAD))
+        if ((import[2] == GEN_UPLOAD) || (import[2] == GEN_DOWNLOAD)) // 2.
         {
             Shared::genfileCmds->insert(cmdId, objectName());
             Shared::genfileTypes->insert(cmdId, static_cast<quint8>(import[2]));
         }
 
-        quint32 offs = 259;
+        quint32 offs = 131; // 5.
 
-        libTxt   = fromTEXT(import.mid(131, 128));
+        libTxt   = QString(import.mid(67, 64)); // 4.
         shortTxt = readNullTermText(import, &offs);
-        ioTxt    = readNullTermText(import, &offs);
-        longTxt  = readNullTermText(import, &offs);
+        ioTxt    = readNullTermText(import, &offs); // 6.
+        longTxt  = readNullTermText(import, &offs); // 7.
         valid    = true;
 
         Shared::hostCmds->insert(cmdId, objectName());
@@ -55,29 +69,23 @@ HostDoc::HostDoc(const QByteArray &import, QObject *parent) : Command(parent)
 
 QString HostDoc::readNullTermText(const QByteArray &data, quint32 *offs)
 {
-    static const QByteArray null16(2, 0x00);
-
     QString ret;
-    quint32 len = static_cast<quint32>(data.size());
 
-    for (; *offs < len; *offs += 2)
+    auto len = static_cast<quint32>(data.size());
+
+    for (; *offs < len; *offs += 1)
     {
-        if ((*offs + 2) < len)
+        if (data[*offs] == 0x00)
         {
-            QByteArray chr = QByteArray::fromRawData(data.data() + *offs, 2);
-
-            if (chr == null16)
-            {
-                break;
-            }
-            else
-            {
-                ret.append(fromTEXT(chr));
-            }
+            break;
+        }
+        else
+        {
+            ret.append(data[*offs]);
         }
     }
 
-    *offs += 2;
+    *offs += 1;
 
     return ret;
 }

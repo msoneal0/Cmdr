@@ -164,7 +164,7 @@ void CmdLine::toHost(const QString &cmdName, const QString &args)
 {
     if (flags & HOST_HOOK)
     {
-        emit dataToHookedHost(toTEXT(args), TEXT);
+        emit dataToHookedHost(args.toUtf8(), TEXT);
     }
     else if (!cmdName.isEmpty())
     {
@@ -178,11 +178,11 @@ void CmdLine::toHost(const QString &cmdName, const QString &args)
         {
             emit setHostCmdId(cmdId);
             emit setGenfileType(Shared::genfileTypes->value(cmdId));
-            emit dataToGenFile(toTEXT(args));
+            emit dataToGenFile(args.toUtf8());
         }
         else
         {
-            emit dataToHost(cmdId, toTEXT(args), TEXT);
+            emit dataToHost(cmdId, args.toUtf8(), TEXT);
         }
     }
 }
@@ -225,7 +225,7 @@ void CmdLine::procCmdLine(const QString &line)
 
     if (flags & GEN_HOOK)
     {
-        emit dataToGenFile(toTEXT(argsLine));
+        emit dataToGenFile(argsLine.toUtf8());
     }
     else if (Shared::clientCmds->contains(cmdName))
     {

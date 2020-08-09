@@ -45,9 +45,9 @@ void About::dispInfo(Command *cmdObj)
     QTextStream txtOut(&txt);
 
     wordWrap("i/o:     ", txtOut, cmdObj->ioText(), Shared::mainWidget);
-    txtOut << "" << endl;
+    txtOut << "" << Qt::endl;
     wordWrap("library: ", txtOut, cmdObj->libText(), Shared::mainWidget);
-    txtOut << "" << endl;
+    txtOut << "" << Qt::endl;
     wordWrap("usage:   ", txtOut, cmdObj->longText(), Shared::mainWidget);
 
     cacheTxt(TEXT, txt);
@@ -115,12 +115,12 @@ void About::dataIn(const QString &argsLine)
         QString     txt;
         QTextStream txtOut(&txt);
 
-        txtOut << libText()                                                                   << endl << endl;
-        txtOut << "Based on QT " << QT_VERSION_STR << " " << 8 * QT_POINTER_SIZE << "bit"     << endl << endl;
-        txtOut << "The program is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE" << endl;
-        txtOut << "WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE." << endl << endl;
-        txtOut << "run: 'ls_cmds' to see all available commands."                             << endl << endl;
-        txtOut << "for more detailed information about a command run: 'about <command>'"      << endl << endl;
+        txtOut << libText()                                                                   << Qt::endl << Qt::endl;
+        txtOut << "Based on QT " << QT_VERSION_STR << " " << 8 * QT_POINTER_SIZE << "bit"     << Qt::endl << Qt::endl;
+        txtOut << "The program is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE" << Qt::endl;
+        txtOut << "WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE." << Qt::endl << Qt::endl;
+        txtOut << "run: 'ls_cmds' to see all available commands."                             << Qt::endl << Qt::endl;
+        txtOut << "for more detailed information about a command run: 'about <command>'"      << Qt::endl << Qt::endl;
 
         cacheTxt(TEXT, txt);
     }
@@ -145,8 +145,8 @@ void ListCmds::ls(QHash<QString, Command *> *cmdObjs, QTextStream &txtOut, const
 
         cmdNames.sort(Qt::CaseInsensitive);
 
-        txtOut << endl;
-        txtOut << title << endl << endl;
+        txtOut << Qt::endl;
+        txtOut << title << Qt::endl << Qt::endl;
 
         for (int i = 0; i < cmdNames.size(); ++i)
         {

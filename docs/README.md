@@ -44,18 +44,21 @@ notes:
 ### Client Header (This Application) ###
 
 ```
-[tag][appName][padding]
+[tag][appName][mod_instructions][padding]
 
 tag     - 4bytes   - 0x4D, 0x52, 0x43, 0x49 (MRCI)
-appName - 134bytes - UTF16LE string (padded with 0x00)
-padding - 272bytes - padding of 0x00 bytes reserved for future expansion
+appName - 32bytes  - UTF8 string (padded with 0x00)
+modInst - 128bytes - UTF8 string (padded with 0x00)
+padding - 128bytes - string of (0x00)
 ```
 
 notes:
 
-* The **tag** is just a fixed ascii string "MRCI" that indicates to the host that the client is indeed attempting to use the MRCI protocol.
+* **tag** is just a fixed ascii string "MRCI" that indicates to the host that the client is indeed attempting to use the MRCI protocol.
 
-* The **appName** is the name of the client application that is connected to the host. It can also contain the client's app version if needed because it doesn't follow any particular standard. This string is accessable to all modules so the commands themselves can be made aware of what app the user is currently using.
+* **appName** is the name of the client application that is connected to the host. It can also contain the client's app version if needed because it doesn't follow any particular standard. This string is accessable to all modules so the commands themselves can be made aware of what app the user is currently using.
+
+* **modInst** is an additional set of command lines that can be passed onto to all module processes when they are intialized. This can be used by certain clients that want to intruct certain modules that might be installed in the host to do certain actions during intialization. This remains constant for as long as the session is active and cannot be changed at any point.
 
 ### Host Header ###
 
@@ -85,31 +88,34 @@ notes:
 
 Async commands are 'virtual commands' that this application can encounter at any time while connected to the host. More information about this can be found in the [Async.md](Async.md) document. This application does act on some of the data carried by the async commands but not all of them.
 
-### Development Setup ###
+### Build Setup ###
 
-Linux Required Packages:
+For Linux you need the following packages to successfully build/install:
 ```
 qtbase5-dev
 libssl-dev
 gcc
 make
-makeself
+python3
 ```
 
-### Build From Source (Linux) ###
+For Windows support you need to have the following applications installed:
+```
+OpenSSL
+Qt5.12 or newer
+Python3
+```
 
-Linux_build.sh is a custom script designed to build this project from the source code using qmake, make and makeself. You can pass 2 optional arguments:
+### Build ###
 
-1. The path to the QT bin folder in case you want to compile with a QT install not defined in PATH.
-2. Path of the output makeself file (usually has a .run extension). If not given, the outfile will be named cmdr-x.x.run in the source code folder.
+To build this project from source you just need to run the build.py and then the install.py python scripts. While running the build the script, it will try to find the Qt API installed in your machine according to the PATH env variable. If not found, it will ask you to input where it can find the Qt bin folder where the qmake executable exists or you can bypass all of this by passing the -qt_dir option on it's command line.
 
-Build:
-```
-cd /path/to/source/code
-sh ./linux_build.sh
-```
-Install:
-```
-chmod +x ./cmdr-x.x.run
-./cmdr-x.x.run
-```
+while running the install script, it will ask you to input 1 of 3 options:
+
+***local machine*** - This option will install the built application onto the local machine without creating an installer.
+
+***create installer*** - This option creates an installer that can be distributed to other machines to installation. The resulting installer is just a regular .py script file that the target machine can run if it has Python3 insalled. Only Python3 needs to be installed and an internet connection is not required.
+
+***exit*** - Cancel the installation.
+
+-local or -installer can be passed as command line options for install.py to explicitly select one of the above options without pausing for user input.
