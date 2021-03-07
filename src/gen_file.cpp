@@ -259,8 +259,8 @@ void Genfile::setGenfileType(quint8 typeId)
 
 QByteArray Genfile::autoFill(const QByteArray &data)
 {
-    QStringList args = parseArgs(data, -1);
-    int         ind  = args.indexOf(QRegExp("-len", Qt::CaseInsensitive));
+    auto args = parseArgs(data, -1);
+    auto ind  = args.indexOf(QRegularExpression("-len", QRegularExpression::CaseInsensitiveOption));
 
     if (ind == -1)
     {
@@ -374,7 +374,7 @@ void Genfile::dataIn(const QByteArray &data)
     {
         auto ans = QString(data);
 
-        if (QRegExp("y", Qt::CaseInsensitive).exactMatch(ans))
+        if ("y" == ans.toLower())
         {
             emit unsetUserIO(GEN_HOOK);
 
@@ -382,7 +382,7 @@ void Genfile::dataIn(const QByteArray &data)
 
             setupForWriting();
         }
-        else if (QRegExp("n", Qt::CaseInsensitive).exactMatch(ans))
+        else if ("n" == ans.toLower())
         {
             finished();
         }

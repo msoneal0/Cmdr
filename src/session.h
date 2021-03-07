@@ -26,7 +26,6 @@
 #include <QFile>
 #include <QAbstractSocket>
 #include <QCoreApplication>
-#include <QTextCodec>
 #include <QTextStream>
 #include <QXmlStreamWriter>
 #include <QSsl>

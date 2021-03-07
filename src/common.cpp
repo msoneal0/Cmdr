@@ -350,7 +350,7 @@ QString getParam(const QString &key, const QStringList &args)
 
     QString ret;
 
-    int pos = args.indexOf(QRegExp(key, Qt::CaseInsensitive));
+    int pos = args.indexOf(QRegularExpression(key, QRegularExpression::CaseInsensitiveOption));
 
     if (pos != -1)
     {

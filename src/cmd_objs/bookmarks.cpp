@@ -111,12 +111,12 @@ void SaveBookmark::dataIn(const QString &argsLine)
 {
     if (activeHook())
     {
-        if (QRegExp("y", Qt::CaseInsensitive).exactMatch(argsLine))
+        if ("y" == argsLine.toLower())
         {
             run(baseName, baseArgs);
             term();
         }
-        else if (QRegExp("n", Qt::CaseInsensitive).exactMatch(argsLine))
+        else if ("n" == argsLine.toLower())
         {
             term();
         }

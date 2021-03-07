@@ -94,6 +94,8 @@ For Linux you need the following packages to successfully build/install:
 ```
 qtbase5-dev
 libssl-dev
+libgl1-mesa-dev
+libxcb1-dev
 gcc
 make
 python3

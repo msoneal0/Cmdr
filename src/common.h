@@ -50,7 +50,6 @@
 #include <QTextBlockFormat>
 #include <QComboBox>
 #include <QDebug>
-#include <QTextCodec>
 #include <QCoreApplication>
 #include <QStringList>
 #include <QHostAddress>
@@ -59,8 +58,7 @@
 #include <QJsonDocument>
 #include <QSslSocket>
 #include <QFile>
-#include <QFile>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QFileInfo>
 #include <QMutex>
 #include <QProgressBar>
@@ -75,7 +73,7 @@
 #define CONFIG_FILENAME    "config_v3.json"
 #define APP_NAME           "Cmdr"
 #define APP_TARGET         "cmdr"
-#define APP_VERSION        "3.4"
+#define APP_VERSION        "3.5"
 
 enum TypeID : quint8
 {

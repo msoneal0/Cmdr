@@ -109,20 +109,26 @@ def verbose_copy(src, dst):
     print("cpy: " + src + " --> " + dst)
     
     if os.path.isdir(src):
-        files = os.listdir(src)
-        
-        for file in files:
-            tree_src = src + os.path.sep + file
-            tree_dst = dst + os.path.sep + file
+        if os.path.exists(dst) and os.path.isdir(dst):
+            shutil.rmtree(dst)
             
-            if os.path.isdir(tree_src):
-                if not os.path.exists(tree_dst):
-                    os.makedirs(tree_dst)
+        try:
+            # ignore errors thrown by shutil.copytree()
+            # it's likely not actually failing to copy
+            # the directory but still throws errors if
+            # it fails to apply the same file stats as
+            # the source. this type of errors can be
+            # ignored.
+            shutil.copytree(src, dst)
             
-            verbose_copy(tree_src, tree_dst)
-            
-    else:
+        except:
+            pass
+    
+    elif os.path.exists(src):
         shutil.copyfile(src, dst)
+        
+    else:
+        print("wrn: " + src + " does not exists. skipping.")
         
 def linux_build_app_dir(app_ver, app_name, app_target, qt_bin):
     if not os.path.exists("app_dir/linux/platforms"):
@@ -169,10 +175,14 @@ def linux_build_app_dir(app_ver, app_name, app_target, qt_bin):
     if "/usr/lib/x86_64-linux-gnu/qt5/bin" == qt_bin:
         verbose_copy(qt_bin + "/../../libQt5DBus.so.5", "app_dir/linux/lib/libQt5DBus.so.5")
         verbose_copy(qt_bin + "/../../libQt5XcbQpa.so.5", "app_dir/linux/lib/libQt5XcbQpa.so.5")
+        verbose_copy(qt_bin + "/../../libQt6DBus.so.6", "app_dir/linux/lib/libQt6DBus.so.6")
+        verbose_copy(qt_bin + "/../../libQt6XcbQpa.so.6", "app_dir/linux/lib/libQt6XcbQpa.so.6")
      
     else:
         verbose_copy(qt_bin + "/../lib/libQt5DBus.so.5", "app_dir/linux/lib/libQt5DBus.so.5")
         verbose_copy(qt_bin + "/../lib/libQt5XcbQpa.so.5", "app_dir/linux/lib/libQt5XcbQpa.so.5")
+        verbose_copy(qt_bin + "/../lib/libQt6DBus.so.6", "app_dir/linux/lib/libQt6DBus.so.6")
+        verbose_copy(qt_bin + "/../lib/libQt6XcbQpa.so.6", "app_dir/linux/lib/libQt5XcbQpa.so.6")
 
     verbose_copy("templates/linux_run_script.sh", "app_dir/linux/" + app_target + ".sh")
     verbose_copy("templates/linux_uninstall.sh", "app_dir/linux/uninstall.sh")
@@ -252,6 +262,14 @@ def main():
 
             else:
                 cd()
+                
+                if platform.system() == "Linux":
+                    if os.path.exists("build/linux"):
+                        shutil.rmtree("build/linux")
+                                    
+                elif platform.system() == "Windows":
+                    if os.path.exists("build/windows"):
+                        shutil.rmtree("build/windows")
                 
                 result = subprocess.run([qt_bin + os.sep + "qmake", "-config", "release"])
             
